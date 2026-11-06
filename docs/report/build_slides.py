@@ -175,7 +175,7 @@ text(s, 0.7, 1.9, 6.3, 2.6, "Nền tảng lưu trữ file đám mây trên kiế
 text(s, 0.7, 4.25, 6.3, 1.2, "Design and Deployment of a Spring Boot Containerized Cloud File Storage Platform "
      "based on AWS S3-Compatible Architecture with an Automated CI/CD Pipeline", 14, RGBColor(0xC7, 0xD2, 0xFE), italic=True)
 text(s, 0.7, 5.75, 6.3, 1.0, ["Sinh viên: [Họ tên] · MSSV: [MSSV]", "GVHD: [Họ tên giảng viên] · Môn Điện toán đám mây"], 14, RGBColor(0xCB, 0xD5, 0xE1))
-text(s, 7.3, 5.0, 5.6, 0.4, "Spring Boot 3 · PostgreSQL · S3 · Docker · Terraform · GitHub Actions", 12, RGBColor(0x94, 0xA3, 0xB8), align=PP_ALIGN.CENTER)
+text(s, 7.3, 5.0, 5.6, 0.4, "Spring Boot 3.5 · PostgreSQL · S3 · Docker · Terraform · GitHub Actions", 12, RGBColor(0x94, 0xA3, 0xB8), align=PP_ALIGN.CENTER)
 num[0] += 1
 notes(s, "Chào thầy cô và các bạn. Em xin trình bày đồ án Nimbus Drive – một nền tảng lưu trữ file trên cloud, "
          "xây dựng bằng Spring Boot, lưu file trên object storage chuẩn Amazon S3, đóng gói bằng Docker và triển khai tự động bằng CI/CD.")
@@ -390,7 +390,7 @@ bullets(s, 0.95, 2.6, 4.6, 4.0, [
     "Upload qua server, giới hạn 100 MB/file",
     "Rate-limit lưu RAM, chưa dùng chung nhiều instance",
     "PostgreSQL chung EC2, chưa backup tự động",
-    "Trivy còn báo lỗ hổng thư viện; AWS chưa có HTTPS"], 15)
+    "Còn 2 lỗ hổng cần Spring Boot 4; AWS chưa có HTTPS"], 15)
 fut = [("Upload trực tiếp S3", "Presigned PUT + multipart, file nhiều GB"), ("Thùng rác & phiên bản", "Xóa mềm, khôi phục qua S3 versioning"),
        ("Managed services", "RDS Multi-AZ, ECS Fargate, CloudFront"), ("Bảo mật nâng cao", "OAuth2 Google, 2FA, quét virus, Redis")]
 for i, (t, d) in enumerate(fut):

@@ -368,11 +368,11 @@ P("IaC mô tả hạ tầng (máy chủ, mạng, bucket, quyền) bằng mã ngu
 
 H2("2.6. Các công nghệ phía ứng dụng")
 table("Công nghệ sử dụng", ["Thành phần", "Công nghệ", "Vai trò"], [
-    ["Ngôn ngữ / framework", "Java 21, Spring Boot 3.3", "REST API, DI, cấu hình theo môi trường"],
+    ["Ngôn ngữ / framework", "Java 21, Spring Boot 3.5", "REST API, DI, cấu hình theo môi trường"],
     ["Bảo mật", "Spring Security, JJWT 0.12, BCrypt", "Xác thực stateless bằng JWT, băm mật khẩu"],
     ["Dữ liệu", "Spring Data JPA, Hibernate 6, PostgreSQL 16, Flyway", "Lưu metadata, quản lý phiên bản schema"],
     ["Lưu trữ", "AWS SDK for Java v2 (S3Client, S3Presigner)", "Giao tiếp S3 API, ký presigned URL"],
-    ["Tài liệu API", "springdoc-openapi 2.6 (Swagger UI)", "Tài liệu và thử API trực tuyến"],
+    ["Tài liệu API", "springdoc-openapi 2.10 (Swagger UI)", "Tài liệu và thử API trực tuyến"],
     ["Giám sát", "Actuator, Micrometer, Prometheus, Grafana", "Health check, metrics, dashboard"],
     ["Kiểm thử", "JUnit 5, MockMvc, Testcontainers, JaCoCo", "Unit/API/integration test, đo độ phủ"],
     ["Frontend", "HTML5, CSS3, JavaScript thuần (ES2020)", "SPA không cần bước build, tuân thủ CSP"],
@@ -644,7 +644,7 @@ bullets([
     "Upload/tải trong giao diện đi qua máy chủ ứng dụng (giới hạn 100 MB/file); chưa dùng multipart upload trực tiếp lên S3.",
     "Bộ đếm chống dò mật khẩu lưu trong RAM nên chưa dùng chung khi chạy nhiều instance.",
     "PostgreSQL chạy trong container trên cùng EC2 – một điểm lỗi đơn; chưa có backup tự động.",
-    "Trivy báo nhiều lỗ hổng HIGH/CRITICAL ở các thư viện phụ thuộc; pipeline hiện chỉ cảnh báo, chưa chặn và chưa xử lý xong.",
+    "Quét Trivy ban đầu báo 65 lỗ hổng HIGH/CRITICAL; sau khi nâng Spring Boot 3.3 lên 3.5 và các thư viện liên quan còn 2 lỗi CRITICAL ở spring-webmvc 6.2, chỉ có bản vá trên Spring 7 (Spring Boot 4). Pipeline hiện chỉ cảnh báo, chưa chặn.",
     "Bản triển khai trên AWS chỉ dùng HTTP qua địa chỉ IP vì chưa gắn tên miền, nên chưa có HTTPS.",
 ])
 
