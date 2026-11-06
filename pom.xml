@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <version>3.5.16</version>
         <relativePath/>
     </parent>
 
@@ -19,11 +19,9 @@
 
     <properties>
         <java.version>21</java.version>
-        <aws.sdk.version>2.28.16</aws.sdk.version>
-        <jjwt.version>0.12.6</jjwt.version>
-        <springdoc.version>2.6.0</springdoc.version>
-        <!-- Ban 1.19 cua Boot 3.3 qua cu so voi Docker Engine moi: tu coi nhu khong co Docker va bo qua *IT -->
-        <testcontainers.version>1.21.4</testcontainers.version>
+        <aws.sdk.version>2.57.10</aws.sdk.version>
+        <jjwt.version>0.12.7</jjwt.version>
+        <springdoc.version>2.10.0</springdoc.version>
     </properties>
 
     <dependencyManagement>
@@ -166,7 +164,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.16</version>
                 <executions>
                     <execution>
                         <goals>
