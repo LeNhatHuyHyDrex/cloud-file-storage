@@ -1,0 +1,92 @@
+server:
+  port: 8080
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,application/javascript,application/json,image/svg+xml
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: nimbus-drive
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cloudfs}
+    username: ${DB_USER:cloudfs}
+    password: ${DB_PASSWORD:cloudfs}
+  jpa:
+    hibernate:
+      # Schema do Flyway quan ly (src/main/resources/db/migration)
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:100MB}
+      max-request-size: ${MAX_FILE_SIZE:100MB}
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  jwt:
+    # >= 32 ky tu. PHAI doi khi deploy that (dat qua bien moi truong JWT_SECRET)
+    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  storage:
+    # s3 = AWS S3 / SeaweedFS / MinIO / Ceph... ; local = thu muc tren dia (chi de dev)
+    type: ${STORAGE_TYPE:s3}
+    local-dir: ${STORAGE_LOCAL_DIR:./data/objects}
+    default-quota-bytes: ${DEFAULT_QUOTA_BYTES:1073741824}
+  s3:
+    # De trong endpoint neu dung AWS S3 that; SeaweedFS local: http://localhost:8333
+    endpoint: ${S3_ENDPOINT:http://localhost:8333}
+    # Endpoint ma trinh duyet truy cap duoc, dung de ky presigned URL (mac dinh = endpoint)
+    public-endpoint: ${S3_PUBLIC_ENDPOINT:}
+    region: ${S3_REGION:us-east-1}
+    bucket: ${S3_BUCKET:cloudfs}
+    access-key: ${S3_ACCESS_KEY:cloudfs}
+    secret-key: ${S3_SECRET_KEY:cloudfs-secret}
+    path-style: ${S3_PATH_STYLE:true}
+    presign-ttl-minutes: 15
+  login:
+    max-failures: 5
+    lock-minutes: 5
+
+---
+# Chay khong can Docker: H2 file + luu file vao ./data (mvn spring-boot:run -Dspring-boot.run.profiles=dev)
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:file:./data/nimbus;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ""
+app:
+  storage:
+    type: local

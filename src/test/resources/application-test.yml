@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:nimbus-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+app:
+  storage:
+    type: local
+    local-dir: ${java.io.tmpdir}/nimbus-test-objects
+    default-quota-bytes: 1000
+  jwt:
+    secret: test-secret-test-secret-test-secret-123
+  login:
+    max-failures: 3

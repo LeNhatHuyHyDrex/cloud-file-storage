@@ -1,0 +1,11 @@
+# Caddy tu xin chung chi Let's Encrypt cho {$DOMAIN} va chuyen tiep vao app.
+{$DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 110MB
+	}
+	# Khong cong khai metrics ra Internet
+	@internal path /actuator/prometheus /actuator/metrics*
+	respond @internal 404
+	reverse_proxy app:8080
+}

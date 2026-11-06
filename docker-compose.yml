@@ -1,0 +1,130 @@
+# Nimbus Drive - toan bo he thong chay bang:  docker compose up -d --build
+#   Web/API        http://localhost:8080
+#   S3 endpoint    http://localhost:8333   (SeaweedFS, tuong thich Amazon S3)
+# Tuy chon:
+#   --profile monitoring  -> Prometheus (http://localhost:9090) + Grafana (http://localhost:3000)
+#   --profile proxy       -> Caddy reverse proxy + HTTPS tu dong (dat DOMAIN trong .env)
+# Bien moi truong / secret: copy .env.example thanh .env roi sua.
+
+name: nimbus-drive
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cloudfs
+      POSTGRES_USER: cloudfs
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cloudfs}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudfs -d cloudfs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  # Object storage tuong thich S3 (thay MinIO community da ngung phat hanh ban dung san).
+  # Tren AWS: bo service nay, dat S3_ENDPOINT rong + S3_REGION/S3_BUCKET that.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.52
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/start.sh"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-nimbus}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-nimbus-secret-key}
+    ports:
+      - "8333:8333"   # S3 API (can cho presigned URL tu trinh duyet)
+    volumes:
+      - ./deploy/seaweedfs/start.sh:/start.sh:ro
+      - objdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+
+  app:
+    # Local: build tu source. Tren server: APP_IMAGE=ghcr.io/<owner>/<repo>:<tag>
+    image: ${APP_IMAGE:-nimbus-drive:local}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/cloudfs
+      DB_USER: cloudfs
+      DB_PASSWORD: ${DB_PASSWORD:-cloudfs}
+      STORAGE_TYPE: s3
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://seaweedfs:8333}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:8333}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-nimbus-files}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-nimbus}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-nimbus-secret-key}
+      JWT_SECRET: ${JWT_SECRET:-change-me-change-me-change-me-change-me}
+      DEFAULT_QUOTA_BYTES: ${DEFAULT_QUOTA_BYTES:-1073741824}
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    logging: *logging
+
+  # ---- Tuy chon: giam sat ----
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    logging: *logging
+
+  # ---- Tuy chon: HTTPS ----
+  caddy:
+    image: caddy:2.8-alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    logging: *logging
+
+volumes:
+  pgdata:
+  objdata:
+  caddydata:

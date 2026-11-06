@@ -1,0 +1,5 @@
+key_name  = "nimbus-key"
+app_image = "ghcr.io/<github-user>/cloud-file-storage:latest"
+domain    = ""             # vd "drive.example.com" (tro DNS ve public_ip roi apply lai)
+ssh_cidrs = ["0.0.0.0/0"]
+# force_destroy_bucket = true

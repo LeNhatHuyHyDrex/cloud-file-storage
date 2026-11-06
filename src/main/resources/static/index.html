@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nimbus Drive — Đăng nhập</title>
+  <meta name="description" content="Nimbus Drive - lưu trữ file trên cloud, chạy trên object storage tương thích Amazon S3.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="auth">
+  <section class="auth-hero">
+    <div class="brand"><span class="logo" id="logo-hero"></span> Nimbus Drive</div>
+    <div>
+      <h1>Kho lưu trữ đám mây của riêng bạn.</h1>
+      <p class="lead">Tải lên, sắp xếp và chia sẻ tài liệu an toàn. Dữ liệu nằm trên object storage chuẩn Amazon S3,
+        ứng dụng chạy trong container và được triển khai tự động qua CI/CD.</p>
+    </div>
+    <div class="features" id="features"></div>
+  </section>
+
+  <main class="auth-main">
+    <div class="auth-card">
+      <h2 id="title">Chào mừng trở lại</h2>
+      <div class="muted" id="subtitle">Đăng nhập để truy cập kho file của bạn.</div>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="active" data-mode="login">Đăng nhập</button>
+        <button type="button" data-mode="register">Tạo tài khoản</button>
+      </div>
+
+      <form id="form" novalidate>
+        <div class="form-error hidden" id="error"></div>
+        <div class="field">
+          <label for="username">Tên đăng nhập</label>
+          <input class="input" id="username" name="username" autocomplete="username" required minlength="3" maxlength="50"
+                 placeholder="vd: alice">
+        </div>
+        <div class="field">
+          <label for="password">Mật khẩu</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required
+                 minlength="6" placeholder="Tối thiểu 6 ký tự">
+        </div>
+        <div class="field hidden" id="confirm-field">
+          <label for="confirm">Nhập lại mật khẩu</label>
+          <input class="input" id="confirm" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu">
+        </div>
+        <button class="btn primary block" id="submit" type="submit">Đăng nhập</button>
+      </form>
+      <div class="auth-foot">Spring Boot · PostgreSQL · S3-compatible storage · Docker · GitHub Actions<br>
+        <a href="/swagger-ui.html">Tài liệu API (Swagger)</a></div>
+    </div>
+  </main>
+</div>
+<script src="/js/common.js"></script>
+<script src="/js/auth.js"></script>
+</body>
+</html>

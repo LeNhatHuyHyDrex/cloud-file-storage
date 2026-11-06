@@ -1,0 +1,13 @@
+target/
+data/
+.idea/
+.vscode/
+*.iml
+.env
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
