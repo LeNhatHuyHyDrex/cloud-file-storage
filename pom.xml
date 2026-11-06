@@ -22,6 +22,8 @@
         <aws.sdk.version>2.28.16</aws.sdk.version>
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <!-- Ban 1.19 cua Boot 3.3 qua cu so voi Docker Engine moi: tu coi nhu khong co Docker va bo qua *IT -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>

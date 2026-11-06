@@ -25,6 +25,9 @@ jobs:
           cache: maven
       - name: Maven verify
         run: mvn -B verify
+      # Testcontainers tu bo qua khi khong noi duoc Docker -> khong de CI xanh gia
+      - name: Integration tests must not be skipped
+        run: grep -q '<skipped>0</skipped>' target/failsafe-reports/failsafe-summary.xml
       - name: Upload test & coverage reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,7 +79,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Vulnerability scan (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.name.outputs.image }}:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
