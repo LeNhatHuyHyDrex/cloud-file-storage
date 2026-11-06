@@ -91,8 +91,11 @@ jobs:
   deploy:
     name: Deploy
     needs: image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read   # GITHUB_TOKEN dung de server pull image private tu GHCR
     environment:
       name: production
       url: ${{ vars.APP_URL }}
