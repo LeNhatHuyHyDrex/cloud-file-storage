@@ -174,7 +174,7 @@
       '<td class="act"><button class="icon-btn" data-menu-folder="' + f.id + '">' + icon("more") + "</button></td></tr>"
     ).concat(state.files.map((f) =>
       '<tr data-file-id="' + f.id + '" draggable="true"><td><div class="cell-name">' + fileIcon(f.category) + "<span>" + esc(f.name) + "</span>" +
-      (f.starred ? '<span style="color:#f59e0b">' + icon("star") + "</span>" : "") + "</div></td>" +
+      (f.starred ? '<span style="color:var(--accent)">' + icon("star") + "</span>" : "") + "</div></td>" +
       '<td class="num">' + bytes(f.size) + '</td><td class="num hide-sm" title="' + fullDate(f.uploadedAt) + '">' + date(f.uploadedAt) +
       '</td><td class="num hide-sm">' + (N.CAT_LABEL[f.category] || "Khác") + "</td>" +
       '<td class="act"><button class="icon-btn" data-menu-file="' + f.id + '">' + icon("more") + "</button></td></tr>"

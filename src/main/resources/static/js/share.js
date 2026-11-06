@@ -3,6 +3,7 @@
   const N = window.Nimbus;
   const { icon, esc, bytes, fullDate, fileIcon } = N;
 
+  N.mountThemeToggle();
   const card = document.getElementById("card");
   const token = new URLSearchParams(location.search).get("t") || "";
   const base = "/api/public/shares/" + encodeURIComponent(token);

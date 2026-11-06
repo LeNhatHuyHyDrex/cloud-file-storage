@@ -13,16 +13,16 @@ FIG = os.path.join(HERE, "figures")
 SHOT = os.path.join(ROOT, "docs", "screenshots")
 OUT = os.path.join(HERE, "Slide_NimbusDrive.pptx")
 
-NAVY = RGBColor(0x0F, 0x17, 0x2A)
-INDIGO = RGBColor(0x4F, 0x46, 0xE5)
-VIOLET = RGBColor(0x7C, 0x3A, 0xED)
-PINK = RGBColor(0xDB, 0x27, 0x77)
-GREEN = RGBColor(0x16, 0xA3, 0x4A)
-AMBER = RGBColor(0xD9, 0x77, 0x06)
-INK = RGBColor(0x0F, 0x17, 0x2A)
-MUTED = RGBColor(0x47, 0x55, 0x69)
-SOFT = RGBColor(0xEE, 0xF2, 0xFF)
-CARD = RGBColor(0xF5, 0xF7, 0xFB)
+NAVY = RGBColor(0x10, 0x30, 0x3F)
+INDIGO = RGBColor(0x16, 0x38, 0x4A)
+VIOLET = RGBColor(0x3A, 0x6A, 0x96)
+PINK = RGBColor(0xA0, 0x7A, 0x42)
+GREEN = RGBColor(0x3F, 0x82, 0x63)
+AMBER = RGBColor(0x8F, 0x6C, 0x3E)
+INK = RGBColor(0x10, 0x30, 0x3F)
+MUTED = RGBColor(0x4A, 0x5A, 0x64)
+SOFT = RGBColor(0xE2, 0xEB, 0xEF)
+CARD = RGBColor(0xF2, 0xF4, 0xF5)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 FONT = "Calibri"
 
@@ -83,7 +83,7 @@ def bullets(slide, x, y, w, h, items, size=16, color=INK, gap=8):
         from pptx.oxml.ns import qn
         from lxml import etree
         bu = etree.SubElement(pPr, qn("a:buClr"))
-        clr = etree.SubElement(bu, qn("a:srgbClr")); clr.set("val", "7C3AED")
+        clr = etree.SubElement(bu, qn("a:srgbClr")); clr.set("val", "A07A42")
         ch = etree.SubElement(pPr, qn("a:buChar")); ch.set("char", "•")
         _runs(p, it, size, color, False)
     return tb
@@ -138,14 +138,14 @@ def picture(slide, path, x, y, w=None, h=None, border=False):
         w = h * ar
     pic = slide.shapes.add_picture(path, Inches(x), Inches(y), Inches(w), Inches(h))
     if border:
-        pic.line.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
+        pic.line.color.rgb = RGBColor(0xDC, 0xE2, 0xE6)
         pic.line.width = Pt(1)
     return pic
 
 
 def footer(slide, dark=False):
     num[0] += 1
-    c = RGBColor(0x94, 0xA3, 0xB8)
+    c = RGBColor(0x8C, 0x9B, 0xA4)
     text(slide, 0.6, 7.0, 6, 0.3, "Nimbus Drive · Đồ án Điện toán đám mây", 10, c)
     text(slide, W - 1.6, 7.0, 1.0, 0.3, str(num[0]), 10, c, align=PP_ALIGN.RIGHT)
 
@@ -173,9 +173,9 @@ text(s, 0.7, 0.75, 0.62, 0.62, "☁", 22, WHITE, True, PP_ALIGN.CENTER, MSO_ANCH
 text(s, 1.5, 0.82, 5, 0.5, "Nimbus Drive", 22, WHITE, True)
 text(s, 0.7, 1.9, 6.3, 2.6, "Nền tảng lưu trữ file đám mây trên kiến trúc tương thích Amazon S3", 36, WHITE, True)
 text(s, 0.7, 4.25, 6.3, 1.2, "Design and Deployment of a Spring Boot Containerized Cloud File Storage Platform "
-     "based on AWS S3-Compatible Architecture with an Automated CI/CD Pipeline", 14, RGBColor(0xC7, 0xD2, 0xFE), italic=True)
-text(s, 0.7, 5.75, 6.3, 1.0, ["Sinh viên: [Họ tên] · MSSV: [MSSV]", "GVHD: [Họ tên giảng viên] · Môn Điện toán đám mây"], 14, RGBColor(0xCB, 0xD5, 0xE1))
-text(s, 7.3, 5.0, 5.6, 0.4, "Spring Boot 3.5 · PostgreSQL · S3 · Docker · Terraform · GitHub Actions", 12, RGBColor(0x94, 0xA3, 0xB8), align=PP_ALIGN.CENTER)
+     "based on AWS S3-Compatible Architecture with an Automated CI/CD Pipeline", 14, RGBColor(0xD6, 0xB7, 0x84), italic=True)
+text(s, 0.7, 5.75, 6.3, 1.0, ["Sinh viên: [Họ tên] · MSSV: [MSSV]", "GVHD: [Họ tên giảng viên] · Môn Điện toán đám mây"], 14, RGBColor(0xD5, 0xDD, 0xE1))
+text(s, 7.3, 5.0, 5.6, 0.4, "Spring Boot 3.5 · PostgreSQL · S3 · Docker · Terraform · GitHub Actions", 12, RGBColor(0x8C, 0x9B, 0xA4), align=PP_ALIGN.CENTER)
 num[0] += 1
 notes(s, "Chào thầy cô và các bạn. Em xin trình bày đồ án Nimbus Drive – một nền tảng lưu trữ file trên cloud, "
          "xây dựng bằng Spring Boot, lưu file trên object storage chuẩn Amazon S3, đóng gói bằng Docker và triển khai tự động bằng CI/CD.")
@@ -218,7 +218,7 @@ notes(s, "Mục tiêu gồm bốn phần: một ứng dụng hoàn chỉnh; ki�
 # ---------------------------------------------------------------- 4. Architecture
 s = content("Kiến trúc: tách metadata và nội dung file", "Kiến trúc hệ thống")
 picture(s, os.path.join(FIG, "architecture.png"), 0.6, 1.7, w=8.3, h=5.1)
-cards = [("PostgreSQL", "Người dùng, thư mục ảo, metadata, link chia sẻ", RGBColor(0x25, 0x63, 0xEB)),
+cards = [("PostgreSQL", "Người dùng, thư mục ảo, metadata, link chia sẻ", RGBColor(0x3A, 0x6A, 0x96)),
          ("Object storage", "Nội dung file, key phẳng owner/uuid", PINK),
          ("Presigned URL", "Trình duyệt tải thẳng từ S3, giảm tải server", VIOLET)]
 for i, (t, d, c) in enumerate(cards):
@@ -238,7 +238,7 @@ bullets(s, 8.0, 1.95, 4.75, 3.0, [
     "**S3ObjectStorage** dùng AWS SDK v2 – chạy với AWS S3, SeaweedFS, Ceph, MinIO",
     "**LocalObjectStorage** cho dev/test không cần Docker",
     "Đổi backend chỉ bằng biến môi trường (12-factor)"], 16)
-rect(s, 8.0, 5.05, 4.75, 1.6, RGBColor(0xFD, 0xF2, 0xF8))
+rect(s, 8.0, 5.05, 4.75, 1.6, RGBColor(0xF5, 0xEF, 0xE4))
 text(s, 8.25, 5.2, 4.3, 0.35, "Bài học thực tế", 15, PINK, True)
 text(s, 8.25, 5.58, 4.3, 1.0, "MinIO community ngừng phát hành bản dựng (410 Gone) → chuyển sang SeaweedFS mà không sửa dòng code nghiệp vụ nào.", 14, INK)
 notes(s, "Tầng lưu trữ được trừu tượng hóa bằng interface ObjectStorage. Trong quá trình làm, MinIO bản cộng đồng đã ngừng phát hành, "
@@ -293,7 +293,7 @@ notes(s, "Người dùng tạo link chia sẻ có thời hạn; khách mở link
 s = content("Luồng upload và tải qua presigned URL", "Kiến trúc hệ thống")
 picture(s, os.path.join(FIG, "sequence.png"), 0.6, 1.65, w=8.0, h=5.2)
 steps = [("1", "Xác thực & kiểm tra quota", INDIGO), ("2", "PutObject lên S3 trước", PINK),
-         ("3", "Ghi metadata; lỗi → xóa object", RGBColor(0x25, 0x63, 0xEB)), ("4", "Xóa: commit DB rồi mới xóa object", GREEN)]
+         ("3", "Ghi metadata; lỗi → xóa object", RGBColor(0x3A, 0x6A, 0x96)), ("4", "Xóa: commit DB rồi mới xóa object", GREEN)]
 for i, (n, t, c) in enumerate(steps):
     y = 1.9 + i * 1.2
     circle(s, 8.95, y, 0.55, c, n, 15)
@@ -324,11 +324,11 @@ rect(s, 0.6, 1.8, 5.6, 4.9, NAVY)
 code = ["# Stage 1: build (JDK + Maven, cache .m2)", "FROM maven:3.9-eclipse-temurin-21 AS build", "RUN mvn package && java -Djarmode=tools \\",
         "    -jar app.jar extract --layers", "", "# Stage 2: runtime (chỉ JRE)", "FROM eclipse-temurin:21-jre",
         "COPY dependencies/ application/ ./", "USER appuser        # không chạy root", "HEALTHCHECK curl /actuator/health/liveness"]
-tb = text(s, 0.9, 2.05, 5.1, 4.5, code, 13, RGBColor(0xE2, 0xE8, 0xF0))
+tb = text(s, 0.9, 2.05, 5.1, 4.5, code, 13, RGBColor(0xDC, 0xE2, 0xE6))
 for p in tb.text_frame.paragraphs:
     for r in p.runs:
         r.font.name = "Consolas"
-svc = [("app", "Spring Boot · chờ DB & S3 healthy", VIOLET), ("postgres", "PostgreSQL 16 · volume", RGBColor(0x25, 0x63, 0xEB)),
+svc = [("app", "Spring Boot · chờ DB & S3 healthy", VIOLET), ("postgres", "PostgreSQL 16 · volume", RGBColor(0x3A, 0x6A, 0x96)),
        ("seaweedfs", "S3 API :8333 tự host", PINK), ("caddy", "HTTPS tự động (profile proxy)", AMBER),
        ("prometheus + grafana", "Giám sát (profile monitoring)", GREEN)]
 for i, (t, d, c) in enumerate(svc):
@@ -384,8 +384,8 @@ notes(s, "Cả 22 ca kiểm thử đều đạt trên GitHub Actions, gồm 4 ca
 
 # ---------------------------------------------------------------- 16. Future
 s = content("Hạn chế và hướng phát triển", "Kết luận")
-rect(s, 0.6, 1.8, 5.2, 4.9, RGBColor(0xFE, 0xF2, 0xF2))
-text(s, 0.95, 2.05, 4.6, 0.4, "Hạn chế", 20, RGBColor(0xDC, 0x26, 0x26), True)
+rect(s, 0.6, 1.8, 5.2, 4.9, RGBColor(0xF9, 0xEC, 0xEA))
+text(s, 0.95, 2.05, 4.6, 0.4, "Hạn chế", 20, RGBColor(0xB3, 0x36, 0x2F), True)
 bullets(s, 0.95, 2.6, 4.6, 4.0, [
     "Upload qua server, giới hạn 100 MB/file",
     "Rate-limit lưu RAM, chưa dùng chung nhiều instance",
@@ -404,16 +404,16 @@ notes(s, "Em nhìn nhận một số hạn chế và đề xuất hướng phát
 s = prs.slides.add_slide(BLANK)
 bg(s, NAVY)
 text(s, 0.7, 1.6, 11.9, 1.0, "Cảm ơn thầy cô và các bạn đã lắng nghe", 40, WHITE, True, PP_ALIGN.CENTER)
-text(s, 0.7, 2.75, 11.9, 0.6, "Hỏi & đáp · Demo trực tiếp", 20, RGBColor(0xC7, 0xD2, 0xFE), align=PP_ALIGN.CENTER)
+text(s, 0.7, 2.75, 11.9, 0.6, "Hỏi & đáp · Demo trực tiếp", 20, RGBColor(0xD6, 0xB7, 0x84), align=PP_ALIGN.CENTER)
 demo = [("docker compose up -d --build", "Chạy toàn bộ hệ thống"), ("http://localhost:8080", "Giao diện web"),
         ("/swagger-ui.html", "Tài liệu API"), ("./mvnw verify", "Chạy kiểm thử")]
 for i, (c, d) in enumerate(demo):
     x = 0.7 + i * 3.0
-    rect(s, x, 4.1, 2.8, 1.6, RGBColor(0x1E, 0x29, 0x3B))
-    tb = text(s, x + 0.1, 4.3, 2.6, 0.7, c, 11.5, RGBColor(0xA5, 0xB4, 0xFC), True, PP_ALIGN.CENTER)
+    rect(s, x, 4.1, 2.8, 1.6, RGBColor(0x1A, 0x3C, 0x4E))
+    tb = text(s, x + 0.1, 4.3, 2.6, 0.7, c, 11.5, RGBColor(0xD6, 0xB7, 0x84), True, PP_ALIGN.CENTER)
     for r in tb.text_frame.paragraphs[0].runs:
         r.font.name = "Consolas"
-    text(s, x + 0.2, 5.05, 2.4, 0.5, d, 14, RGBColor(0xCB, 0xD5, 0xE1), align=PP_ALIGN.CENTER)
+    text(s, x + 0.2, 5.05, 2.4, 0.5, d, 14, RGBColor(0xD5, 0xDD, 0xE1), align=PP_ALIGN.CENTER)
 num[0] += 1
 notes(s, "Em xin cảm ơn. Em sẵn sàng demo trực tiếp và trả lời câu hỏi.")
 

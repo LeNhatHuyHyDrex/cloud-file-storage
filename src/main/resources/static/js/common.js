@@ -25,6 +25,19 @@
   }
   applyTheme(currentTheme());
 
+  /** Nut sang/toi noi o goc tren, dung cho cac trang khong co thanh cong cu. */
+  function mountThemeToggle() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "icon-btn theme-fab";
+    btn.title = "Đổi giao diện sáng/tối";
+    btn.setAttribute("aria-label", "Đổi giao diện sáng/tối");
+    const paint = () => { btn.innerHTML = icon(currentTheme() === "dark" ? "sun" : "moon"); };
+    btn.addEventListener("click", () => { toggleTheme(); paint(); });
+    paint();
+    document.body.appendChild(btn);
+  }
+
   // ---------- Session ----------
   const session = {
     get token() { try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; } },
@@ -211,5 +224,5 @@
     }
   }
 
-  window.Nimbus = { api, uploadFile, session, icon, esc, bytes, date, fullDate, ext, fileIcon, folderIcon, CAT_LABEL, toast, copyText, toggleTheme, currentTheme, ApiError };
+  window.Nimbus = { api, uploadFile, session, icon, esc, bytes, date, fullDate, ext, fileIcon, folderIcon, CAT_LABEL, toast, copyText, toggleTheme, currentTheme, mountThemeToggle, ApiError };
 })();

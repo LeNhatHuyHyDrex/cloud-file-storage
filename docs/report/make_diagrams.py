@@ -9,10 +9,10 @@ OUT = os.path.join(os.path.dirname(__file__), "figures")
 os.makedirs(OUT, exist_ok=True)
 plt.rcParams["font.family"] = "Segoe UI"
 
-INK = "#0f172a"
-MUTED = "#64748b"
-C = {"client": "#e0e7ff", "app": "#ede9fe", "db": "#dbeafe", "s3": "#fce7f3", "ops": "#dcfce7", "edge": "#fef3c7", "gray": "#f1f5f9"}
-B = {"client": "#4f46e5", "app": "#7c3aed", "db": "#2563eb", "s3": "#db2777", "ops": "#16a34a", "edge": "#d97706", "gray": "#94a3b8"}
+INK = "#13222b"
+MUTED = "#5b6b75"
+C = {"client": "#e6eef2", "app": "#dfe9ee", "db": "#e3ebf3", "s3": "#f4ecdf", "ops": "#e2efe8", "edge": "#f0e8da", "gray": "#eef1f3"}
+B = {"client": "#16384a", "app": "#16384a", "db": "#3a6a96", "s3": "#a07a42", "ops": "#3f8263", "edge": "#8f6c3e", "gray": "#8c9ba4"}
 
 
 def box(ax, x, y, w, h, title, sub="", kind="app", fs=11):
@@ -125,8 +125,8 @@ save(fig, "cicd.png")
 
 # 5. AWS deployment
 fig, ax = canvas(12, 5.6)
-ax.add_patch(FancyBboxPatch((0.2, 0.3), 11.6, 5.0, boxstyle="round,pad=0.02,rounding_size=0.2", fc="#fffbeb", ec="#f59e0b", lw=1.4))
-ax.text(0.45, 4.95, "AWS  ·  ap-southeast-2 (Sydney)  ·  Terraform", fontsize=10.5, weight="bold", color="#b45309")
+ax.add_patch(FancyBboxPatch((0.2, 0.3), 11.6, 5.0, boxstyle="round,pad=0.02,rounding_size=0.2", fc="#f8f5ef", ec="#a07a42", lw=1.4))
+ax.text(0.45, 4.95, "AWS  ·  ap-southeast-2 (Sydney)  ·  Terraform", fontsize=10.5, weight="bold", color="#8f6c3e")
 ax.add_patch(FancyBboxPatch((2.6, 0.7), 5.6, 3.9, boxstyle="round,pad=0.02,rounding_size=0.15", fc="white", ec="#94a3b8", lw=1.2, ls="--"))
 ax.text(2.8, 4.3, "EC2 t3.small · Ubuntu 24.04 · IMDSv2 · EBS mã hóa", fontsize=9, color=MUTED)
 box(ax, 0.5, 2.4, 1.7, 1.1, "Elastic IP", "SG: 80/443/22", "edge", 10)

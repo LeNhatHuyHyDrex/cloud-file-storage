@@ -7,6 +7,7 @@
     return;
   }
 
+  window.Nimbus.mountThemeToggle();
   document.getElementById("logo-hero").innerHTML = icon("cloud");
   document.getElementById("features").innerHTML = [
     ["shield", "Bảo mật JWT", "Mật khẩu BCrypt, chống dò mật khẩu"],
