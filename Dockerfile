@@ -12,6 +12,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q package -DskipTests \
 # ---- Stage 2: runtime (chi JRE, user thuong, tach layer de cache) ----
 FROM eclipse-temurin:21-jre
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --no-create-home --uid 10001 appuser
