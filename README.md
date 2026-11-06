@@ -61,7 +61,7 @@ H2 database + lưu file vào thư mục `./data`:
 ./mvnw verify
 ```
 - 18 unit/API test (MockMvc + H2) chạy ở mọi máy, độ phủ dòng ~80% (báo cáo JaCoCo: `target/site/jacoco`).
-- `*IT` dùng **Testcontainers** (PostgreSQL thật, SeaweedFS S3 thật) — tự bỏ qua nếu máy không có Docker, chạy trên CI.
+- 4 test `*IT` dùng **Testcontainers** (PostgreSQL thật, SeaweedFS S3 thật) — tự bỏ qua nếu máy không có Docker; trên CI mà bị bỏ qua thì pipeline báo lỗi.
 
 ## API chính
 
@@ -101,7 +101,7 @@ EC2 Ubuntu 24.04 (IMDSv2, ổ mã hóa) cài sẵn Docker · Security Group 80/4
 Trên EC2 app dùng `docker-compose.aws.yml` → Amazon S3 thật, credential lấy từ **IAM instance profile** (không lưu access key).
 Sau đó đặt `DEPLOY_HOST` = output `public_ip` và push lên `main`.
 
-> Terraform đã được viết và kiểm tra cú pháp thủ công nhưng chưa `apply` trên tài khoản AWS thật trong quá trình phát triển.
+> Đã `terraform apply` và kiểm thử đầu cuối thật ở vùng `ap-southeast-2` (đặt `region` trong `terraform.tfvars`).
 
 ## Cấu trúc thư mục
 

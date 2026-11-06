@@ -360,13 +360,13 @@ bullets(s, 8.85, 1.9, 3.9, 4.8, [
     "**IAM role** chỉ Get/Put/Delete trên 1 bucket",
     "**EC2** Ubuntu 24.04, IMDSv2, EBS mã hóa, Elastic IP",
     "user_data cài Docker, sinh secret ngẫu nhiên",
-    "terraform apply → push main → tự deploy"], 15)
+    "Đã chạy thật ở Sydney: upload, S3, presigned URL, chia sẻ đều đạt"], 15)
 notes(s, "Toàn bộ hạ tầng AWS được mô tả bằng Terraform. Trên AWS ứng dụng dùng Amazon S3 thật, lấy credential tạm thời từ IAM role nên không cần lưu access key. "
-         "Lưu ý: phần Terraform đã viết và rà soát nhưng chưa apply trên tài khoản AWS thật.")
+         "Hệ thống đã chạy thật ở vùng Sydney và được kiểm thử đầu cuối qua Internet.")
 
 # ---------------------------------------------------------------- 15. Results
 s = content("Kết quả kiểm thử", "Kết quả")
-big = [("18/18", "ca test đạt", INDIGO), ("~80%", "độ phủ dòng (JaCoCo)", VIOLET), ("22", "REST endpoint", PINK), ("5", "service container", GREEN)]
+big = [("22/22", "ca test đạt trên CI", INDIGO), ("~80%", "độ phủ dòng (JaCoCo)", VIOLET), ("22", "REST endpoint", PINK), ("5", "service container", GREEN)]
 for i, (n, d, c) in enumerate(big):
     x = 0.6 + i * 3.07
     rect(s, x, 1.85, 2.85, 2.0, CARD)
@@ -374,13 +374,13 @@ for i, (n, d, c) in enumerate(big):
     text(s, x, 3.1, 2.85, 0.5, d, 15, MUTED, align=PP_ALIGN.CENTER)
 rows = [("Unit test", "Tên file, phân loại, token, khóa đăng nhập, JWT"),
         ("API test (MockMvc + H2)", "Luồng đầy đủ: cô lập user, quota, thư mục đệ quy, chia sẻ, chống XSS"),
-        ("Integration (Testcontainers)", "PostgreSQL 16 và SeaweedFS S3 thật – chạy trên CI")]
+        ("Integration (Testcontainers)", "PostgreSQL 16 và SeaweedFS S3 thật – đạt trên GitHub Actions")]
 for i, (t, d) in enumerate(rows):
     y = 4.25 + i * 0.82
     rect(s, 0.6, y, 12.15, 0.68, SOFT if i % 2 == 0 else WHITE)
     text(s, 0.9, y, 3.8, 0.68, t, 15, INK, True, anchor=MSO_ANCHOR.MIDDLE)
     text(s, 4.8, y, 7.8, 0.68, d, 14, MUTED, anchor=MSO_ANCHOR.MIDDLE)
-notes(s, "Tất cả 18 ca kiểm thử chạy cục bộ đều đạt, độ phủ dòng khoảng 80%. Các integration test cần Docker được chạy trên GitHub Actions.")
+notes(s, "Cả 22 ca kiểm thử đều đạt trên GitHub Actions, gồm 4 ca integration với PostgreSQL và S3 thật; độ phủ dòng khoảng 80%.")
 
 # ---------------------------------------------------------------- 16. Future
 s = content("Hạn chế và hướng phát triển", "Kết luận")
@@ -390,7 +390,7 @@ bullets(s, 0.95, 2.6, 4.6, 4.0, [
     "Upload qua server, giới hạn 100 MB/file",
     "Rate-limit lưu RAM, chưa dùng chung nhiều instance",
     "PostgreSQL chung EC2, chưa backup tự động",
-    "Terraform chưa apply trên AWS thật"], 15)
+    "Trivy còn báo lỗ hổng thư viện; AWS chưa có HTTPS"], 15)
 fut = [("Upload trực tiếp S3", "Presigned PUT + multipart, file nhiều GB"), ("Thùng rác & phiên bản", "Xóa mềm, khôi phục qua S3 versioning"),
        ("Managed services", "RDS Multi-AZ, ECS Fargate, CloudFront"), ("Bảo mật nâng cao", "OAuth2 Google, 2FA, quét virus, Redis")]
 for i, (t, d) in enumerate(fut):

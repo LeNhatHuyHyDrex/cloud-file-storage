@@ -126,7 +126,7 @@ save(fig, "cicd.png")
 # 5. AWS deployment
 fig, ax = canvas(12, 5.6)
 ax.add_patch(FancyBboxPatch((0.2, 0.3), 11.6, 5.0, boxstyle="round,pad=0.02,rounding_size=0.2", fc="#fffbeb", ec="#f59e0b", lw=1.4))
-ax.text(0.45, 4.95, "AWS  ·  ap-southeast-1 (Singapore)  ·  Terraform", fontsize=10.5, weight="bold", color="#b45309")
+ax.text(0.45, 4.95, "AWS  ·  ap-southeast-2 (Sydney)  ·  Terraform", fontsize=10.5, weight="bold", color="#b45309")
 ax.add_patch(FancyBboxPatch((2.6, 0.7), 5.6, 3.9, boxstyle="round,pad=0.02,rounding_size=0.15", fc="white", ec="#94a3b8", lw=1.2, ls="--"))
 ax.text(2.8, 4.3, "EC2 t3.small · Ubuntu 24.04 · IMDSv2 · EBS mã hóa", fontsize=9, color=MUTED)
 box(ax, 0.5, 2.4, 1.7, 1.1, "Elastic IP", "SG: 80/443/22", "edge", 10)

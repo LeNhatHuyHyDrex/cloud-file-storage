@@ -600,13 +600,30 @@ table("Kết quả kiểm thử tự động (mvn verify)", ["Bộ test", "Số 
     ["JwtServiceTest", "3", "Sinh/giải mã token, sai khóa, hết hạn", "Đạt"],
     ["UnitTests", "4", "Làm sạch tên file, phân loại file, token chia sẻ, khóa đăng nhập", "Đạt"],
     ["ApiFlowTest (MockMvc + H2)", "11", "Bảo vệ endpoint, validate, trùng tài khoản, khóa đăng nhập, upload/tải/đổi tên/gắn sao/xóa, cô lập người dùng, quota, thư mục đệ quy, chia sẻ, chống XSS, presign, health", "Đạt"],
-    ["PostgresMigrationIT", "1", "Flyway + JPA trên PostgreSQL 16 thật (Testcontainers)", "Chạy trên CI*"],
-    ["S3ObjectStorageIT", "3", "Put/Get/Delete, presigned URL, tạo bucket idempotent trên SeaweedFS thật", "Chạy trên CI*"],
+    ["PostgresMigrationIT", "1", "Flyway + JPA trên PostgreSQL 16 thật (Testcontainers)", "Đạt (CI)"],
+    ["S3ObjectStorageIT", "3", "Put/Get/Delete, presigned URL, tạo bucket idempotent trên SeaweedFS thật", "Đạt (CI)"],
 ], [4.2, 1.4, 8.0, 2.4])
-P("18/18 ca kiểm thử chạy cục bộ đều đạt; **độ phủ dòng lệnh đạt khoảng 80%** (JaCoCo). (*) Các bài integration test cần Docker "
-  "nên được cấu hình tự bỏ qua trên máy không có Docker và chạy trên runner GitHub Actions.", indent=True)
+P("**22/22 ca kiểm thử đạt** trên GitHub Actions: 18 ca unit/API và 4 ca integration với PostgreSQL 16 và SeaweedFS thật; "
+  "độ phủ dòng lệnh của 18 ca chạy cục bộ đạt khoảng 80% (JaCoCo). Lần chạy CI đầu tiên cho thấy Testcontainers 1.19 không kết nối được "
+  "Docker của runner nên 4 ca integration bị bỏ qua mà pipeline vẫn báo thành công. Nhóm đã nâng lên 1.21.4 và thêm bước làm pipeline "
+  "thất bại nếu integration test bị bỏ qua.", indent=True)
 
-H2("5.3. Đánh giá")
+H2("5.3. Triển khai thực tế trên AWS")
+P("Hệ thống đã được triển khai thật bằng terraform apply tại vùng ap-southeast-2 (Sydney), tạo 17 tài nguyên; image do pipeline "
+  "build được job Deploy đưa lên EC2 tự động. Kiểm thử đầu cuối qua Internet cho kết quả sau:")
+table("Kết quả kiểm thử trên môi trường AWS", ["Kiểm tra", "Kết quả"], [
+    ["Đăng ký, upload, tải file qua HTTP công khai", "Đạt, nội dung tải về khớp file gốc"],
+    ["Object xuất hiện trong bucket Amazon S3", "Đạt, key dạng owner/uuid"],
+    ["App truy cập S3 bằng IAM role, không dùng access key", "Đạt"],
+    ["Presigned URL tải trực tiếp từ S3", "Đạt"],
+    ["Link chia sẻ công khai không cần đăng nhập", "Đạt"],
+    ["Xóa file thì object biến mất khỏi danh sách S3", "Đạt"],
+    ["Gọi API không có token / truy cập /actuator/prometheus từ ngoài", "401 / 404 đúng thiết kế"],
+], [10, 6])
+P("Lần triển khai này cũng phát hiện một lỗi cấu hình: với IMDSv2, giới hạn hop mặc định bằng 1 khiến container không lấy được "
+  "credential của IAM role; đã sửa bằng http_put_response_hop_limit = 2.")
+
+H2("5.4. Đánh giá")
 table("Đối chiếu mục tiêu", ["Mục tiêu", "Kết quả"], [
     ["Ứng dụng lưu trữ file đầy đủ chức năng", "Hoàn thành F01–F08, giao diện responsive, sáng/tối"],
     ["Kiến trúc tương thích S3", "Chạy với SeaweedFS (local) và Amazon S3 (AWS) không đổi mã; hỗ trợ presigned URL"],
@@ -627,7 +644,8 @@ bullets([
     "Upload/tải trong giao diện đi qua máy chủ ứng dụng (giới hạn 100 MB/file); chưa dùng multipart upload trực tiếp lên S3.",
     "Bộ đếm chống dò mật khẩu lưu trong RAM nên chưa dùng chung khi chạy nhiều instance.",
     "PostgreSQL chạy trong container trên cùng EC2 – một điểm lỗi đơn; chưa có backup tự động.",
-    "Terraform đã viết và rà soát nhưng chưa được apply trên tài khoản AWS thật trong khuôn khổ đồ án.",
+    "Trivy báo nhiều lỗ hổng HIGH/CRITICAL ở các thư viện phụ thuộc; pipeline hiện chỉ cảnh báo, chưa chặn và chưa xử lý xong.",
+    "Bản triển khai trên AWS chỉ dùng HTTP qua địa chỉ IP vì chưa gắn tên miền, nên chưa có HTTPS.",
 ])
 
 # =====================================================================
