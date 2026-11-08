@@ -159,7 +159,7 @@ msgs = [(1.0, 4.2, "POST /api/files (multipart, Bearer JWT)", B["client"]), (4.2
 y = 5.1
 for a, b, t, col in msgs:
     if a == b:
-        ax.text(a + 0.15, y, "▸ " + t, fontsize=8.6, color=col, va="center")
+        ax.text(a + 0.15, y, "» " + t, fontsize=8.6, color=col, va="center")
     else:
         arrow(ax, (a, y), (b, y), t, color=col, off=(0, 0.03))
     y -= 0.62
@@ -196,4 +196,51 @@ ax.add_patch(Ellipse((7.5, 0.9), 1.9, 0.52, fc=C["ops"], ec=B["ops"], lw=1.2))
 ax.text(7.5, 0.9, "Deploy · giám sát", ha="center", va="center", fontsize=8.8)
 ax.plot([8.45, 9.6], [0.9, 1.3], color="#94a3b8", lw=0.9)
 save(fig, "usecase.png")
+
+# 8. Luong xac thuc JWT
+fig, ax = canvas(12, 4.6)
+actors = [("Trình duyệt", 1.2, "client"), ("API · Security + JWT", 4.6, "app"), ("Controller / Service", 8.0, "db"), ("PostgreSQL", 10.9, "gray")]
+for n, x, k in actors:
+    box(ax, x - 1.0, 3.8, 2.0, 0.55, n, "", k, 9.5)
+    ax.plot([x, x], [0.35, 3.8], color="#cbd5e1", lw=1.2, ls="--")
+rows = [(1.2, 4.6, "POST /api/auth/login {username, password}", B["client"]),
+        (4.6, 10.9, "tìm user · BCrypt.matches · LoginAttemptService", B["db"]),
+        (4.6, 1.2, "200 {token HS256, hạn 24 giờ}", B["app"]),
+        (1.2, 4.6, "GET /api/files  Authorization: Bearer <token>", B["client"]),
+        (4.6, 8.0, "verify chữ ký + hạn → principal = username", B["app"]),
+        (8.0, 10.9, "truy vấn luôn lọc owner = username", B["db"])]
+y = 3.35
+for a, b, t, col in rows:
+    arrow(ax, (a, y), (b, y), t, color=col, off=(0, 0.03))
+    y -= 0.52
+ax.text(6.0, 0.05, "Stateless: không có session phía server → scale ngang dễ; token sai/hết hạn → 401.", ha="center", fontsize=8.8, color=INK)
+save(fig, "auth_flow.png")
+
+# 9. Vong doi link chia se
+fig, ax = canvas(11, 3.8)
+box(ax, 0.2, 1.7, 1.9, 1.1, "Tạo link", "token 192 bit", "client", 10)
+box(ax, 3.2, 1.7, 2.2, 1.1, "Còn hiệu lực", "ai có link đều tải", "ops", 10)
+box(ax, 6.6, 2.5, 2.3, 0.95, "Hết hạn", "HTTP 410 Gone", "edge", 10)
+box(ax, 6.6, 0.8, 2.3, 0.95, "Đã thu hồi", "HTTP 404", "gray", 10)
+box(ax, 3.2, 0.0, 2.2, 0.8, "File bị xóa", "link xóa theo (CASCADE)", "s3", 9)
+arrow(ax, (2.1, 2.25), (3.2, 2.25), "POST /shares", off=(0, 0.05))
+arrow(ax, (5.4, 2.5), (6.6, 2.9), "quá expires_at", off=(-0.2, 0.15))
+arrow(ax, (5.4, 1.95), (6.6, 1.3), "DELETE /shares/{id}", off=(-0.15, -0.5))
+arrow(ax, (4.3, 0.8), (4.3, 1.7), "", off=(0, 0))
+ax.text(4.4, 3.05, "mỗi lượt tải: download_count + 1", ha="center", fontsize=8.5, color=B["ops"])
+ax.text(5.5, -0.35, "Trang công khai chỉ trả tên, kích thước, loại file; không lộ object key hay tài khoản khác.", ha="center", fontsize=8.5, color=INK)
+save(fig, "share_state.png")
+
+# 10. Phong thu nhieu lop
+fig, ax = canvas(11, 5.4)
+bands = [("1. Mạng & hạ tầng AWS", "Security Group · IMDSv2 · IAM quyền tối thiểu · S3 chặn public · EBS/S3 mã hóa", "s3"),
+         ("2. Biên (Caddy)", "HTTPS Let's Encrypt · giới hạn body 110 MB · chặn /actuator/prometheus", "edge"),
+         ("3. Ứng dụng (Spring)", "CSP · JWT stateless · rate-limit đăng nhập · validate DTO · RFC 7807", "app"),
+         ("4. Dữ liệu", "truy vấn theo owner · 404 thay 403 · BCrypt · token chia sẻ 192 bit", "db")]
+for i, (t, sub, k) in enumerate(bands):
+    box(ax, 0.3, 4.1 - i * 1.3, 10.2, 1.0, t, sub, k, 11)
+    if i:
+        arrow(ax, (5.4, 4.1 - (i - 1) * 1.3), (5.4, 4.1 - i * 1.3 + 1.0))
+ax.text(5.4, 0.0, "Kẻ tấn công phải vượt qua cả bốn lớp; một lớp hỏng không làm lộ toàn bộ hệ thống.", ha="center", fontsize=9, color=INK)
+save(fig, "defense.png")
 print("ok", sorted(os.listdir(OUT)))

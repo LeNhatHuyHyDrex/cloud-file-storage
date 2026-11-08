@@ -160,6 +160,35 @@ def content(title, kicker=None):
     return s
 
 
+def grid(slide, x, y, widths, header, rows, size=13, row_h=0.62, head_h=0.52, first_bold=True):
+    """Bang dung hinh khoi: dong tieu de + cac dong xen ke mau."""
+    total = sum(widths)
+    rect(slide, x, y, total, head_h, INDIGO, radius=False)
+    cx = x
+    for w, h in zip(widths, header):
+        text(slide, cx + 0.15, y, w - 0.25, head_h, h, size, WHITE, True, anchor=MSO_ANCHOR.MIDDLE)
+        cx += w
+    for i, row in enumerate(rows):
+        ry = y + head_h + i * row_h
+        rect(slide, x, ry, total, row_h, SOFT if i % 2 == 0 else CARD, radius=False)
+        cx = x
+        for j, (w, cell) in enumerate(zip(widths, row)):
+            text(slide, cx + 0.15, ry, w - 0.25, row_h, cell, size - 1 if j else size, INK if (j == 0 and first_bold) else MUTED,
+                 bold=(j == 0 and first_bold), anchor=MSO_ANCHOR.MIDDLE)
+            cx += w
+
+
+def card_grid(slide, items, cols, x0=0.6, y0=1.85, cw=2.85, ch=2.15, gx=0.22, gy=0.3, palette=None, tsize=17, dsize=13.5):
+    palette = palette or [INDIGO, VIOLET, PINK, GREEN]
+    for i, (t, d) in enumerate(items):
+        col, row = i % cols, i // cols
+        x, y = x0 + col * (cw + gx), y0 + row * (ch + gy)
+        rect(slide, x, y, cw, ch, CARD)
+        circle(slide, x + 0.25, y + 0.25, 0.55, palette[i % len(palette)], str(i + 1), 15)
+        text(slide, x + 0.25, y + 0.95, cw - 0.45, 0.4, t, tsize, INK, True)
+        text(slide, x + 0.25, y + 1.38, cw - 0.45, ch - 1.45, d, dsize, MUTED)
+
+
 def notes(slide, s):
     slide.notes_slide.notes_text_frame.text = s
 
@@ -215,6 +244,36 @@ for i, (t, d, c) in enumerate(goals):
 notes(s, "Mục tiêu gồm bốn phần: một ứng dụng hoàn chỉnh; kiến trúc tương thích S3 để không bị khóa vào một nhà cung cấp; "
          "đóng gói container và hạ tầng dưới dạng mã; và pipeline CI/CD tự động hoàn toàn.")
 
+s = content("Khảo sát: khoảng trống mà đề tài lấp đầy", "Bài toán & mục tiêu")
+grid(s, 0.6, 1.75, [2.75, 2.45, 2.15, 2.0, 2.8],
+     ["Tiêu chí", "Google Drive / Dropbox", "Nextcloud", "S3 Console", "Nimbus Drive"],
+     [["Mô hình", "SaaS đóng", "Tự host (PHP)", "Công cụ quản trị", "Tự host hoặc AWS"],
+      ["Kiểm soát dữ liệu", "Thấp", "Cao", "Cao", "Cao (S3 / SeaweedFS)"],
+      ["User, quota, thư mục", "Có", "Có", "Không", "Có"],
+      ["Chia sẻ link có hạn", "Có", "Có", "Không", "Có, thu hồi được"],
+      ["Presigned URL tải trực tiếp", "Không công khai", "Tùy cấu hình", "Có", "Có (15 phút)"],
+      ["Container + IaC + CI/CD", "Không áp dụng", "Cộng đồng", "Không áp dụng", "Có sẵn, đã chạy thật"]],
+     size=14, row_h=0.64)
+rect(s, 0.6, 6.15, 12.15, 0.6, SOFT)
+text(s, 0.9, 6.15, 11.6, 0.6, "Định vị: hệ thống tham chiếu gọn (~2.000 dòng Java) để học và áp dụng kỹ thuật cloud, không phải bản sao Google Drive", 14, INDIGO, True, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Trước khi làm em khảo sát bốn nhóm giải pháp. Dịch vụ thương mại thì tiện nhưng dữ liệu nằm trong hệ sinh thái của họ. "
+         "Nextcloud tự host được nhưng là khối PHP lớn, khó dùng để học kiến trúc cloud. S3 Console chỉ là công cụ quản trị bucket, không có user, thư mục hay chia sẻ. "
+         "Nimbus Drive lấp khoảng trống ở giữa: đủ tính năng để dùng thật, đủ nhỏ để đọc hiểu toàn bộ mã nguồn, và có sẵn container, hạ tầng dưới dạng mã và CI/CD.")
+
+s = content("Nền tảng: tám khái niệm của Amazon S3", "Kiến thức nền")
+card_grid(s, [("Bucket", "Thùng chứa tên duy nhất toàn cầu, gắn với một region"),
+          ("Object key", "Tên phẳng của object. Ở đây: owner/<uuid>, không dùng tên file"),
+          ("Presigned URL", "URL ký sẵn SigV4, tự hết hạn: ủy quyền tạm thời cho trình duyệt"),
+          ("Versioning", "Giữ nhiều phiên bản; lifecycle xóa bản cũ sau 30 ngày"),
+          ("SSE-S3", "Mã hóa phía server AES-256, bật mặc định bằng Terraform"),
+          ("Block Public Access", "Chặn mọi cấu hình công khai; chỉ IAM hoặc presigned URL"),
+          ("Strong consistency", "Đọc ngay sau khi ghi luôn thấy dữ liệu mới (từ 12/2020)"),
+          ("CORS + Lifecycle", "Cho phép GET/HEAD từ trình duyệt; hủy multipart dở sau 7 ngày")],
+      4, ch=2.2, gy=0.25, dsize=13)
+notes(s, "Tám khái niệm S3 mà đồ án dùng. Bucket là thùng chứa. Key là tên phẳng của object, em đặt owner gạch chéo uuid để không trùng và không lộ tên file. "
+         "Presigned URL là URL đã ký sẵn có hạn, cho phép trình duyệt tải thẳng từ S3. Versioning, mã hóa SSE và chặn public được bật bằng Terraform. "
+         "S3 có strong consistency nên đọc ngay sau khi ghi luôn đúng, giúp luồng upload rồi hiển thị ảnh thu nhỏ đơn giản hơn.")
+
 # ---------------------------------------------------------------- 4. Architecture
 s = content("Kiến trúc: tách metadata và nội dung file", "Kiến trúc hệ thống")
 picture(s, os.path.join(FIG, "architecture.png"), 0.6, 1.7, w=8.3, h=5.1)
@@ -243,6 +302,26 @@ text(s, 8.25, 5.2, 4.3, 0.35, "Bài học thực tế", 15, PINK, True)
 text(s, 8.25, 5.58, 4.3, 1.0, "MinIO community ngừng phát hành bản dựng (410 Gone) → chuyển sang SeaweedFS mà không sửa dòng code nghiệp vụ nào.", 14, INK)
 notes(s, "Tầng lưu trữ được trừu tượng hóa bằng interface ObjectStorage. Trong quá trình làm, MinIO bản cộng đồng đã ngừng phát hành, "
          "em chuyển sang SeaweedFS chỉ bằng cấu hình – đây là minh chứng rõ nhất cho lợi ích của kiến trúc tương thích S3.")
+
+s = content("Mã nguồn gọn: ~2.000 dòng Java, ~1.400 dòng giao diện", "Kiến trúc hệ thống")
+rect(s, 0.6, 1.75, 6.0, 5.0, NAVY)
+tree = ["src/main/java/com/cloudfs/", "  controller/  Auth Me File Folder Share", "  service/     File Folder Share LoginAttempt",
+        "  storage/     ObjectStorage S3 Local", "  security/    JwtService JwtAuthFilter", "  config/      StorageConfig OpenApi",
+        "  web/         ApiExceptionHandler", "src/main/resources/", "  db/migration/V1__init.sql", "  static/  index app share .html  css/ js/",
+        "src/test/  ApiFlowTest UnitTests *IT", "deploy/  seaweedfs caddy monitoring terraform", "Dockerfile  docker-compose(.aws).yml", ".github/workflows/ci-cd.yml"]
+tb = text(s, 0.85, 2.0, 5.6, 4.6, tree, 12.5, RGBColor(0xDC, 0xE2, 0xE6))
+for pp in tb.text_frame.paragraphs:
+    pp.space_after = Pt(4)
+    for r in pp.runs:
+        r.font.name = "Consolas"
+grid(s, 6.95, 1.75, [1.95, 3.85], ["Lớp", "Công nghệ"],
+     [["Ngôn ngữ", "Java 21 · Spring Boot 3.5"], ["Bảo mật", "Spring Security · JJWT · BCrypt"],
+      ["Dữ liệu", "JPA/Hibernate 6 · PostgreSQL 16 · Flyway"], ["Lưu trữ", "AWS SDK v2 (S3Client, S3Presigner)"],
+      ["API docs", "springdoc-openapi 2.10"], ["Giám sát", "Actuator · Micrometer · Prometheus · Grafana"],
+      ["Kiểm thử", "JUnit 5 · MockMvc · Testcontainers · JaCoCo"], ["Frontend", "HTML/CSS/JS thuần, không bước build"]],
+     size=13, row_h=0.56)
+notes(s, "Mã nguồn chia lớp rõ ràng: controller, service, storage, security, config. Công nghệ chọn theo hướng ít phụ thuộc: frontend là JavaScript thuần "
+         "nên không có bước build và tuân thủ CSP chặt. Toàn bộ backend khoảng hai nghìn dòng Java nên có thể đọc hiểu hết trong một buổi.")
 
 # ---------------------------------------------------------------- 6. ERD
 s = content("Cơ sở dữ liệu: 4 bảng, quản lý bằng Flyway", "Kiến trúc hệ thống")
@@ -289,6 +368,17 @@ rect(s, 0.6, 5.95, 12.15, 0.8, SOFT)
 text(s, 0.9, 5.95, 11.6, 0.8, "File HTML/SVG do người dùng tải lên luôn bị ép tải về (không hiển thị inline) để chống XSS", 15, INDIGO, True, anchor=MSO_ANCHOR.MIDDLE)
 notes(s, "Người dùng tạo link chia sẻ có thời hạn; khách mở link sẽ thấy trang tải công khai, có xem trước ảnh.")
 
+s = content("Danh sách, menu thao tác, link đã chia sẻ và Swagger", "Demo")
+shots = [("05-list-view.png", "Chế độ danh sách + breadcrumb thư mục lồng nhau"), ("06-context-menu.png", "Menu: xem, tải, đổi tên, sao, chia sẻ, Link S3"),
+         ("08-shared-links.png", "Quản lý link đã chia sẻ: lượt tải, hạn dùng, thu hồi"), ("11-swagger.png", "Swagger UI: tài liệu API tương tác")]
+for i, (f, cap_) in enumerate(shots):
+    col, row = i % 2, i // 2
+    x, y = 0.6 + col * 6.2, 1.65 + row * 2.62
+    picture(s, os.path.join(SHOT, f), x, y, w=5.95, h=2.15, border=True)
+    text(s, x, y + 2.2, 5.95, 0.3, cap_, 12.5, MUTED)
+notes(s, "Thêm bốn màn hình: chế độ danh sách với breadcrumb, menu ngữ cảnh có mục Link S3 tạm thời, trang quản lý các link đã chia sẻ cho biết số lượt tải và hạn dùng, "
+         "và Swagger UI để thử API trực tiếp.")
+
 # ---------------------------------------------------------------- 10. Sequence
 s = content("Luồng upload và tải qua presigned URL", "Kiến trúc hệ thống")
 picture(s, os.path.join(FIG, "sequence.png"), 0.6, 1.65, w=8.0, h=5.2)
@@ -300,6 +390,43 @@ for i, (n, t, c) in enumerate(steps):
     text(s, 9.7, y, 3.1, 0.55, t, 15, INK, True, anchor=MSO_ANCHOR.MIDDLE)
 notes(s, "Thứ tự ghi được thiết kế để không mất dữ liệu: khi upload ghi S3 trước rồi mới ghi DB, nếu DB lỗi thì xóa object; "
          "khi xóa thì commit DB xong mới xóa object.")
+
+s = content("Hai cách phục vụ file: qua server và presigned URL", "Kiến trúc hệ thống")
+grid(s, 0.6, 1.75, [3.0, 4.6, 4.55], ["Tiêu chí", "Tải qua máy chủ ứng dụng", "Presigned URL tới S3"],
+     [["Đường đi dữ liệu", "S3 → app → trình duyệt", "S3 → trình duyệt (trực tiếp)"],
+      ["Tải cho app", "Cao: app stream toàn bộ file", "Gần như bằng 0"],
+      ["Kiểm soát quyền", "Mỗi request qua JWT filter", "Quyền nằm trong URL, hết hạn 15 phút"],
+      ["Yêu cầu hạ tầng", "Chỉ mở cổng app", "Trình duyệt thấy S3 + cấu hình CORS"],
+      ["Dùng trong đề tài", "Tải xuống, xem trước, link chia sẻ", "Menu “Link S3 tạm thời”, API /presign"]],
+     size=14, row_h=0.72)
+rect(s, 0.6, 5.95, 12.15, 0.8, SOFT)
+text(s, 0.9, 5.95, 11.6, 0.8, "Backend local (dev) không có S3 → /presign trả 501; có test kiểm tra hành vi này", 15, INDIGO, True, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Hệ thống hỗ trợ hai cách phục vụ nội dung. Đi qua ứng dụng thì mọi truy cập đều được xác thực và đếm lượt nhưng tốn băng thông của server. "
+         "Presigned URL cho trình duyệt tải thẳng từ S3, server gần như không tốn gì, quyền được ký vào URL và tự hết hạn sau 15 phút. "
+         "Khi chạy chế độ dev với ổ đĩa cục bộ, API presign trả 501 và có test cho trường hợp này.")
+
+s = content("Xác thực JWT: stateless, mọi truy vấn lọc theo owner", "Bảo mật")
+picture(s, os.path.join(FIG, "auth_flow.png"), 0.6, 1.75, w=8.4, h=4.9)
+bullets(s, 9.3, 1.95, 3.5, 4.7, [
+    "Token **HMAC-SHA**, hạn **24 giờ**, khóa ≥ 32 ký tự từ biến môi trường",
+    "Không lưu session → chạy nhiều instance dễ",
+    "Sai **5 lần** → khóa **5 phút** (HTTP 429)",
+    "Tài nguyên người khác → **404**, không lộ sự tồn tại",
+    "BCrypt: có muối, cố ý chậm"], 14.5)
+notes(s, "Đăng nhập xong server ký một JWT. Mỗi request sau đó mang token, filter xác minh chữ ký và hạn rồi lấy tên người dùng làm principal; "
+         "mọi service nhận tên này làm tham số owner nên không thể đọc dữ liệu của người khác. Sai mật khẩu năm lần thì khóa năm phút. "
+         "Nhược điểm của JWT là khó thu hồi trước hạn, nên refresh token nằm trong hướng phát triển.")
+
+s = content("Vòng đời của link chia sẻ công khai", "Bảo mật")
+picture(s, os.path.join(FIG, "share_state.png"), 0.6, 1.75, w=8.2, h=4.6)
+bullets(s, 9.1, 1.95, 3.7, 4.7, [
+    "Token **192 bit** (SecureRandom, Base64URL): không thể đoán",
+    "Hạn: 1 giờ · 1 ngày · 7 ngày · 30 ngày · vô hạn",
+    "Thu hồi bất cứ lúc nào; xóa file thì link xóa theo (CASCADE)",
+    "Trang công khai chỉ trả tên, kích thước, loại file",
+    "Hết hạn → **410**, thu hồi → **404**"], 14.5)
+notes(s, "Link công khai là ngoại lệ duy nhất của nguyên tắc mọi thứ phải đăng nhập, nên được thiết kế chặt: token 192 bit, có hạn, thu hồi được, "
+         "và trang công khai chỉ lộ thông tin tối thiểu. Hết hạn trả 410, đã thu hồi trả 404.")
 
 # ---------------------------------------------------------------- 11. Security
 s = content("Bảo mật nhiều lớp", "Bảo mật")
@@ -317,6 +444,18 @@ for i, (t, d) in enumerate(sec):
     text(s, x + 1.1, y + 0.25, 4.6, 0.4, t, 18, INK, True)
     text(s, x + 1.1, y + 0.7, 4.6, 0.65, d, 14, MUTED)
 notes(s, "Bảo mật được áp dụng ở cả tầng ứng dụng lẫn hạ tầng: xác thực, phân quyền, chống XSS, kiểm soát đầu vào, IAM quyền tối thiểu và mã hóa dữ liệu.")
+
+s = content("Phòng thủ nhiều lớp: bốn vòng bảo vệ", "Bảo mật")
+picture(s, os.path.join(FIG, "defense.png"), 0.6, 1.7, w=7.6, h=5.0)
+rect(s, 8.5, 1.85, 4.25, 4.8, CARD)
+text(s, 8.8, 2.05, 3.7, 0.4, "Chống XSS ở hai tầng", 17, INDIGO, True)
+bullets(s, 8.8, 2.6, 3.7, 4.0, [
+    "Giao diện: CSP **script-src 'self'**, không inline script, escape dữ liệu khi render",
+    "File người dùng: chỉ ảnh/PDF/text/video/audio được xem inline; **HTML, SVG ép tải về**",
+    "Response file kèm CSP **sandbox** + default-src 'none'",
+    "Tên file bị làm sạch: bỏ đường dẫn, ký tự điều khiển"], 13.5)
+notes(s, "Bốn lớp bảo vệ từ ngoài vào trong: hạ tầng AWS, biên Caddy, ứng dụng Spring và dữ liệu. Riêng XSS được chặn ở hai tầng: "
+         "CSP chặt cho giao diện, và với file người dùng tải lên thì HTML, SVG luôn bị ép tải về, response còn kèm CSP sandbox.")
 
 # ---------------------------------------------------------------- 12. Containers
 s = content("Container hóa với Docker & Docker Compose", "Container & CI/CD")
@@ -340,6 +479,20 @@ for i, (t, d, c) in enumerate(svc):
 notes(s, "Dockerfile nhiều giai đoạn, tách layer để build nhanh, chạy bằng user thường và có healthcheck. "
          "Docker Compose dựng cả hệ thống bằng một lệnh, có profile tùy chọn cho HTTPS và giám sát.")
 
+s = content("Cấu hình 12-factor: đổi môi trường chỉ bằng biến", "Container & CI/CD")
+grid(s, 0.6, 1.75, [3.4, 3.0, 5.75], ["Biến", "Mặc định", "Ý nghĩa"],
+     [["S3_ENDPOINT", "localhost:8333", "Trống = Amazon S3 thật; có giá trị = S3 tự host"],
+      ["S3_ACCESS_KEY / SECRET", "nimbus…", "Trống trên AWS → dùng IAM instance profile"],
+      ["S3_PATH_STYLE", "true", "true cho SeaweedFS/MinIO, false cho Amazon S3"],
+      ["S3_PUBLIC_ENDPOINT", "= endpoint", "Địa chỉ trình duyệt thấy, để ký presigned URL"],
+      ["STORAGE_TYPE", "s3", "s3 hoặc local (thư mục, chỉ dev)"],
+      ["JWT_SECRET", "phải đổi", "Khóa ký token ≥ 32 ký tự; Terraform sinh ngẫu nhiên"],
+      ["DEFAULT_QUOTA_BYTES", "1 GB", "Hạn mức mỗi người dùng"],
+      ["MAX_FILE_SIZE", "100 MB", "Kích thước tối đa mỗi file"]],
+     size=13.5, row_h=0.55)
+notes(s, "Toàn bộ cấu hình đi qua biến môi trường theo nguyên tắc 12-factor. Chuyển từ SeaweedFS sang Amazon S3 chỉ là để trống endpoint và key, "
+         "đặt path-style về false; ứng dụng tự dùng IAM role. Khóa JWT được Terraform sinh ngẫu nhiên khi dựng hạ tầng.")
+
 # ---------------------------------------------------------------- 13. CI/CD
 s = content("Pipeline CI/CD tự động với GitHub Actions", "Container & CI/CD")
 picture(s, os.path.join(FIG, "cicd.png"), 0.6, 1.65, w=12.15)
@@ -352,6 +505,26 @@ for i, (n, d) in enumerate(stats):
 notes(s, "Mỗi lần push, pipeline chạy test kể cả integration test bằng Testcontainers, build image, quét lỗ hổng bằng Trivy, "
          "đẩy lên GHCR và tự deploy lên server, sau đó smoke test endpoint health. Image gắn tag theo commit nên rollback dễ dàng.")
 
+s = content("CI/CD chi tiết: cấu hình và thực hành an toàn", "Container & CI/CD")
+rect(s, 0.6, 1.8, 5.9, 4.9, SOFT)
+text(s, 0.9, 2.0, 5.3, 0.4, "Cấu hình GitHub cho deploy", 19, INDIGO, True)
+grid(s, 0.85, 2.55, [2.35, 3.2], ["Tên", "Mục đích"],
+     [["DEPLOY_ENABLED", "true = bật job deploy"], ["APP_URL", "URL môi trường production"], ["DEPLOY_HOST", "Elastic IP của EC2"],
+      ["DEPLOY_USER", "ubuntu"], ["DEPLOY_SSH_KEY", "Khóa riêng, không commit"], ["GITHUB_TOKEN", "pull/push GHCR"]],
+     size=12, row_h=0.5, head_h=0.45)
+text(s, 6.9, 2.0, 5.8, 0.4, "Thực hành an toàn trong pipeline", 19, INDIGO, True)
+bullets(s, 6.9, 2.6, 5.85, 4.1, [
+    "**concurrency** hủy lần chạy cũ khi có push mới",
+    "Action Trivy **ghim theo SHA**, không dùng tag",
+    "Bước kiểm tra **skipped = 0**: integration test bị bỏ qua thì pipeline đỏ",
+    "Quyền tối thiểu: job image ghi packages, job deploy chỉ đọc",
+    "Environment **production** có thể bật duyệt thủ công",
+    "Cache Buildx (type=gha) rút ngắn thời gian build",
+    "Báo cáo test + JaCoCo lưu 14 ngày"], 14.5)
+notes(s, "Chi tiết pipeline: bên trái là các biến và secret cần cấu hình, đặc biệt DEPLOY_ENABLED dùng như công tắc. Bên phải là các thực hành an toàn: "
+         "ghim action theo SHA, cấp quyền tối thiểu cho từng job, và đặc biệt là bước kiểm tra integration test không bị bỏ qua - "
+         "đây là bài học từ lần CI đầu tiên báo xanh giả.")
+
 # ---------------------------------------------------------------- 14. AWS
 s = content("Triển khai trên AWS bằng Terraform", "Triển khai AWS")
 picture(s, os.path.join(FIG, "aws.png"), 0.6, 1.65, w=7.9, h=5.2)
@@ -363,6 +536,25 @@ bullets(s, 8.85, 1.9, 3.9, 4.8, [
     "Đã chạy thật ở Sydney: upload, S3, presigned URL, chia sẻ đều đạt"], 15)
 notes(s, "Toàn bộ hạ tầng AWS được mô tả bằng Terraform. Trên AWS ứng dụng dùng Amazon S3 thật, lấy credential tạm thời từ IAM role nên không cần lưu access key. "
          "Hệ thống đã chạy thật ở vùng Sydney và được kiểm thử đầu cuối qua Internet.")
+
+s = content("Quy trình triển khai từ đầu đến cuối: sáu bước", "Triển khai AWS")
+steps6 = [("Đăng nhập AWS", "aws login, tạo key pair EC2"), ("Khai báo biến", "terraform.tfvars: key_name, app_image, region"),
+          ("terraform apply", "S3, IAM, Security Group, EC2, Elastic IP"), ("Cấu hình GitHub", "Secrets + DEPLOY_ENABLED=true"),
+          ("git push main", "Test → image → Trivy → GHCR → deploy"), ("Kiểm tra", "/actuator/health = UP, đăng ký và upload thử")]
+card_grid(s, steps6, 3, ch=2.0, gy=0.25, cw=3.9, gx=0.225, tsize=18, dsize=14)
+rect(s, 0.6, 6.3, 12.15, 0.55, SOFT)
+text(s, 0.9, 6.3, 11.6, 0.55, "Rollback: chạy lại workflow ở commit cũ (tag sha-<commit>) · Dọn dẹp: terraform destroy", 14, INDIGO, True, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Sáu bước từ đầu đến cuối. Đăng nhập AWS, khai báo biến, terraform apply dựng hạ tầng, cấu hình GitHub, push lên main để pipeline tự deploy, "
+         "rồi kiểm tra health. Rollback chỉ là deploy lại tag commit cũ vì dữ liệu nằm ở volume PostgreSQL và bucket S3. Khi không dùng thì terraform destroy để không tốn chi phí.")
+
+s = content("Giám sát: Prometheus + Grafana, 8 chỉ số chính", "Triển khai AWS")
+card_grid(s, [("Uptime", "up của job nimbus-drive"), ("Request / giây", "http_server_requests"), ("Độ trễ p95", "histogram phân vị 95"),
+          ("Lỗi 5xx (5 phút)", "tỷ lệ lỗi phía server"), ("File đã upload", "nimbus.files.uploaded"), ("Bytes upload", "nimbus.files.upload.bytes"),
+          ("JVM heap", "jvm_memory_used_bytes"), ("Kết nối DB", "hikaricp_connections_active")],
+      4, ch=2.05, gy=0.25, dsize=13)
+text(s, 0.6, 6.55, 12.1, 0.35, "Scrape 15 giây qua /actuator/prometheus (Caddy chặn từ Internet) · Docker healthcheck: /actuator/health/liveness", 12.5, MUTED)
+notes(s, "Dashboard Grafana có tám chỉ số: tình trạng sống, lưu lượng, độ trễ p95, tỷ lệ lỗi 5xx, hai metric nghiệp vụ do em tự đăng ký là số file và số byte upload, "
+         "heap JVM và số kết nối cơ sở dữ liệu. Prometheus scrape mỗi 15 giây và endpoint metrics bị Caddy chặn từ Internet.")
 
 # ---------------------------------------------------------------- 15. Results
 s = content("Kết quả kiểm thử", "Kết quả")
@@ -382,6 +574,60 @@ for i, (t, d) in enumerate(rows):
     text(s, 4.8, y, 7.8, 0.68, d, 14, MUTED, anchor=MSO_ANCHOR.MIDDLE)
 notes(s, "Cả 22 ca kiểm thử đều đạt trên GitHub Actions, gồm 4 ca integration với PostgreSQL và S3 thật; độ phủ dòng khoảng 80%.")
 
+s = content("22 ca kiểm thử: từ unit đến hệ thống thật", "Kết quả")
+grid(s, 0.6, 1.75, [3.5, 0.9, 7.75], ["Lớp test", "Ca", "Điều được kiểm chứng"],
+     [["JwtServiceTest", "3", "Token đúng / sai khóa / hết hạn"],
+      ["UnitTests", "4", "Làm sạch tên file, phân loại, token chia sẻ, khóa đăng nhập"],
+      ["ApiFlowTest (MockMvc + H2)", "11", "401, validate, 409, khóa 429, vòng đời file, cô lập user, quota 413, thư mục đệ quy, chia sẻ, chống XSS, presign 501, health"],
+      ["PostgresMigrationIT", "1", "Flyway + Hibernate trên PostgreSQL 16 thật"],
+      ["S3ObjectStorageIT", "3", "Put/Get/Delete, presigned URL không cần credential, tạo bucket idempotent (SeaweedFS thật)"]],
+     size=13.5, row_h=0.68)
+for i, (n, d, c) in enumerate([("22/22", "đạt trên GitHub Actions", INDIGO), ("18", "chạy được mọi máy", VIOLET), ("4", "cần Docker (Testcontainers)", PINK)]):
+    x = 0.6 + i * 4.1
+    rect(s, x, 6.0, 3.85, 0.85, SOFT)
+    text(s, x + 0.2, 6.0, 1.6, 0.85, n, 26, c, True, anchor=MSO_ANCHOR.MIDDLE)
+    text(s, x + 1.8, 6.0, 1.95, 0.85, d, 12.5, INK, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Chi tiết hai mươi hai ca: ba ca JWT, bốn ca unit, mười một ca API chạy bằng MockMvc, một ca migration trên PostgreSQL thật và ba ca S3 trên SeaweedFS thật. "
+         "Mười tám ca đầu chạy được trên mọi máy; bốn ca integration cần Docker và đã chạy thật trên GitHub Actions.")
+
+s = content("Sự cố thật và bài học rút ra", "Kết quả")
+grid(s, 0.6, 1.7, [2.85, 4.45, 4.85], ["Sự cố", "Nguyên nhân gốc", "Khắc phục / bài học"],
+     [["MinIO không tải được", "Bản community ngừng phát hành (410 Gone)", "Chuyển SeaweedFS chỉ bằng cấu hình"],
+      ["CI xanh giả", "Testcontainers 1.19 bỏ qua 4 ca integration", "Nâng 1.21.4 + bước kiểm tra skipped = 0"],
+      ["Không lấy được credential IAM", "IMDSv2 hop limit = 1, container cần 2", "http_put_response_hop_limit = 2"],
+      ["Không pull được image GHCR", "Job deploy thiếu quyền packages: read", "Thêm quyền + docker login bằng GITHUB_TOKEN"],
+      ["Trivy: 65 lỗ hổng HIGH/CRITICAL", "Spring Boot 3.3 + thư viện cũ", "Lên Boot 3.5.16, override phiên bản, apt upgrade → còn 2"],
+      ["Giao diện thiếu nhất quán", "Bộ màu indigo – hồng, thiếu phân cấp", "Design token: mực – sâm panh, serif, sáng/tối"]],
+     size=13.5, row_h=0.74)
+notes(s, "Sáu sự cố thật và bài học. MinIO ngừng phát hành bản dựng nên chuyển SeaweedFS. CI báo xanh giả vì Testcontainers bỏ qua test nên em thêm bước chặn. "
+         "IMDSv2 hop limit làm container không lấy được credential. Thiếu quyền đọc package làm server không pull được image. "
+         "Trivy ban đầu báo 65 lỗ hổng, sau khi nâng phiên bản còn 2 lỗi CRITICAL của spring-webmvc chỉ vá ở Spring 7. Cuối cùng là thiết kế lại giao diện bằng design token.")
+
+s = content("Sáu quyết định thiết kế và đánh đổi", "Kết luận")
+grid(s, 0.6, 1.7, [2.6, 4.4, 5.15], ["Vấn đề", "Chọn", "Đánh đổi"],
+     [["Nơi lưu file", "Object storage chuẩn S3", "Độ trễ cao hơn ổ đĩa cục bộ"],
+      ["Thư mục", "Thư mục ảo trong PostgreSQL", "Xóa đệ quy xử lý ở tầng service"],
+      ["Xác thực", "JWT stateless", "Khó thu hồi token trước hạn"],
+      ["Thứ tự ghi", "S3 trước DB; xóa DB trước S3", "Có thể sót object mồ côi nếu app sập"],
+      ["Frontend", "JavaScript thuần, không build", "Mã giao diện dài hơn framework"],
+      ["Hạ tầng AWS", "1 EC2 + S3 qua Terraform", "Không Multi-AZ; DB là điểm lỗi đơn"]],
+     size=13.5, row_h=0.74)
+notes(s, "Sáu quyết định chính và cái giá phải trả. Điểm đáng nhấn mạnh là thứ tự ghi: vì không có giao dịch phân tán giữa S3 và PostgreSQL, "
+         "em chọn thứ tự sao cho lỗi ở bước nào cũng không để lại metadata trỏ tới object không tồn tại.")
+
+s = content("Chi phí vận hành trên AWS và cách tối ưu", "Kết luận")
+grid(s, 0.6, 1.75, [2.9, 4.6, 4.65], ["Thành phần", "Cách tính", "Tối ưu"],
+     [["EC2 t3.small", "Theo giờ chạy", "Dừng máy khi không demo"],
+      ["EBS gp3 20 GB", "GB-tháng, tính cả khi máy dừng", "Xóa khi terraform destroy"],
+      ["IPv4 công khai / EIP", "Tính phí theo giờ từ 02/2024", "Giải phóng khi không dùng"],
+      ["Amazon S3", "GB lưu + request + dữ liệu ra", "Lifecycle; presigned URL giảm lưu lượng"],
+      ["GitHub Actions + GHCR", "Trong hạn mức repo công khai", "Cache Buildx"]],
+     size=14, row_h=0.66)
+rect(s, 0.6, 5.85, 12.15, 0.9, SOFT)
+text(s, 0.9, 5.85, 11.6, 0.9, "Không nêu đơn giá vì thay đổi theo vùng và thời điểm: tính bằng AWS Pricing Calculator. Biện pháp hiệu quả nhất: hạ tầng dưới dạng mã → dựng và hủy bằng một lệnh.", 14, INDIGO, True, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Chi phí chủ yếu đến từ EC2 và EBS, ngoài ra từ năm 2024 AWS tính phí cả địa chỉ IPv4 công khai. Em không nêu con số vì giá thay đổi theo vùng và thời điểm. "
+         "Nhờ Terraform, hạ tầng dựng và hủy bằng một lệnh nên rất phù hợp bài toán học tập có ngân sách hạn chế.")
+
 # ---------------------------------------------------------------- 16. Future
 s = content("Hạn chế và hướng phát triển", "Kết luận")
 rect(s, 0.6, 1.8, 5.2, 4.9, RGBColor(0xF9, 0xEC, 0xEA))
@@ -399,6 +645,21 @@ for i, (t, d) in enumerate(fut):
     text(s, 7.15, y + 0.05, 5.6, 0.4, t, 18, INK, True)
     text(s, 7.15, y + 0.48, 5.6, 0.4, d, 14, MUTED)
 notes(s, "Em nhìn nhận một số hạn chế và đề xuất hướng phát triển, ưu tiên cao nhất là upload trực tiếp lên S3 và thùng rác/phiên bản file.")
+
+s = content("Kết luận và bài học kinh nghiệm", "Kết luận")
+lessons = [("Chuẩn mở là bảo hiểm", "Bám chuẩn S3 + port/adapter → đổi MinIO sang SeaweedFS, local sang AWS không sửa nghiệp vụ", INDIGO),
+           ("Thứ tự thao tác > giao dịch phân tán", "Với hai kho dữ liệu, chọn đúng thứ tự ghi/xóa đơn giản và hiệu quả", VIOLET),
+           ("Kiểm thử trên môi trường giống thật", "Lỗi hop limit và Testcontainers bị bỏ qua chỉ lộ khi chạy trên AWS / CI", PINK),
+           ("Bảo mật là quá trình liên tục", "Trivy: 65 → 2 lỗ hổng sau nâng cấp; cần quy trình cập nhật định kỳ", GREEN),
+           ("Hạ tầng dưới dạng mã", "Dựng, kiểm thử, hủy cả môi trường AWS bằng một lệnh", AMBER)]
+for i, (t, d, c) in enumerate(lessons):
+    y = 1.8 + i * 0.98
+    rect(s, 0.6, y, 12.15, 0.86, CARD)
+    circle(s, 0.85, y + 0.14, 0.58, c, str(i + 1), 15)
+    text(s, 1.7, y, 4.4, 0.86, t, 17, INK, True, anchor=MSO_ANCHOR.MIDDLE)
+    text(s, 6.2, y, 6.4, 0.86, d, 13.5, MUTED, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "Tổng kết năm bài học: chuẩn mở là bảo hiểm trước rủi ro nhà cung cấp; thứ tự thao tác quan trọng hơn giao dịch phân tán; kiểm thử phải giống môi trường thật; "
+         "bảo mật là quá trình liên tục; và hạ tầng dưới dạng mã giúp tái tạo cũng như dọn dẹp dễ dàng.")
 
 # ---------------------------------------------------------------- 17. Thanks
 s = prs.slides.add_slide(BLANK)

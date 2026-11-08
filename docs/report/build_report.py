@@ -322,6 +322,36 @@ bullets([
     "Tự động hóa build/deploy, đo đạc và giám sát bằng Spring Boot Actuator, Prometheus và Grafana.",
 ])
 
+H2("1.5. Khảo sát các giải pháp hiện có")
+P("Trước khi thiết kế, em khảo sát bốn nhóm giải pháp lưu trữ file phổ biến để xác định khoảng trống mà đề tài có thể lấp đầy. "
+  "Các dịch vụ thương mại như Google Drive hay Dropbox rất tiện dụng nhưng dữ liệu nằm hoàn toàn trong hệ sinh thái của nhà cung cấp, "
+  "người dùng không kiểm soát được vị trí lưu trữ và không thể tự mở rộng tính năng. Nextcloud cho phép tự host nhưng là một khối "
+  "ứng dụng PHP lớn, khó dùng để học cách thiết kế kiến trúc cloud-native. Các công cụ dòng lệnh/console của S3 (AWS Console, MinIO "
+  "Console) lại chỉ là giao diện quản trị bucket, không có khái niệm người dùng, thư mục, quota hay chia sẻ.")
+table("So sánh Nimbus Drive với các giải pháp khảo sát", ["Tiêu chí", "Google Drive / Dropbox", "Nextcloud", "S3 Console", "Nimbus Drive"], [
+    ["Mô hình", "SaaS đóng", "Tự host (PHP)", "Công cụ quản trị", "Tự host hoặc AWS, mã nguồn mở"],
+    ["Kiểm soát dữ liệu", "Thấp", "Cao", "Cao", "Cao (chọn S3/SeaweedFS)"],
+    ["Quản lý user, quota", "Có", "Có", "Không", "Có (JWT, quota 1 GB mặc định)"],
+    ["Thư mục, chia sẻ link", "Có", "Có", "Không", "Có (thư mục ảo, link có hạn)"],
+    ["Tải trực tiếp từ object storage", "Không công khai", "Tùy cấu hình", "Có", "Có (presigned URL)"],
+    ["Đóng gói container + IaC", "Không áp dụng", "Có (cộng đồng)", "Không áp dụng", "Có (Compose + Terraform)"],
+    ["CI/CD mẫu sẵn", "Không", "Không", "Không", "Có (GitHub Actions)"],
+    ["Độ phức tạp để học", "Không phù hợp", "Cao", "Thấp", "Vừa phải, mã ngắn gọn"],
+], [3.2, 3.0, 2.6, 2.6, 4.6])
+P("Từ khảo sát, đề tài định vị Nimbus Drive là một **hệ thống tham chiếu gọn nhẹ**: đủ tính năng để dùng thật, đủ nhỏ để đọc hiểu "
+  "toàn bộ mã nguồn (khoảng 2.000 dòng Java và 1.400 dòng giao diện), và đặt trọng tâm vào các kỹ thuật điện toán đám mây "
+  "thay vì tính năng cộng tác phức tạp.")
+
+H2("1.6. Bố cục báo cáo")
+bullets([
+    "**Chương 1** giới thiệu bài toán, mục tiêu, phạm vi và khảo sát giải pháp hiện có.",
+    "**Chương 2** trình bày cơ sở lý thuyết: điện toán đám mây, lưu trữ đối tượng S3, container, CI/CD, IaC và các công nghệ sử dụng.",
+    "**Chương 3** phân tích yêu cầu và thiết kế kiến trúc, cơ sở dữ liệu, API, luồng xử lý và bảo mật.",
+    "**Chương 4** mô tả chi tiết quá trình triển khai: mã nguồn, container hóa, pipeline CI/CD, hạ tầng AWS và giám sát.",
+    "**Chương 5** trình bày kết quả, kiểm thử, triển khai thực tế, các sự cố gặp phải và đánh giá.",
+    "**Chương 6** kết luận và đề xuất hướng phát triển; phần phụ lục hướng dẫn cài đặt, cấu hình và ví dụ gọi API.",
+])
+
 # =====================================================================
 # CHUONG 2
 # =====================================================================
@@ -349,6 +379,29 @@ P("Mọi request S3 được ký bằng **AWS Signature Version 4 (SigV4)** dự
 P("Trong quá trình thực hiện, nhóm ghi nhận **MinIO bản cộng đồng đã ngừng phát hành bản dựng sẵn** (trang tải về trả mã 410 Gone). "
   "Vì vậy đồ án chọn **SeaweedFS** (giấy phép Apache 2.0, vẫn được duy trì tích cực) làm S3 server tự host; nhờ thiết kế "
   "trừu tượng hóa, thay đổi này không ảnh hưởng mã nghiệp vụ – một minh chứng cho lợi ích của kiến trúc tương thích S3.")
+
+table("So sánh ba loại lưu trữ", ["Tiêu chí", "Block storage (EBS)", "File storage (EFS/NFS)", "Object storage (S3)"], [
+    ["Đơn vị dữ liệu", "Khối (block) gắn như ổ đĩa", "File trong cây thư mục", "Object = dữ liệu + metadata + key"],
+    ["Truy cập", "Qua hệ điều hành của 1 máy", "Giao thức NFS/SMB, nhiều máy", "HTTP API (REST), mọi nơi"],
+    ["Khả năng mở rộng", "Giới hạn theo dung lượng ổ", "Lớn nhưng có trần", "Gần như vô hạn"],
+    ["Độ trễ", "Rất thấp", "Thấp", "Cao hơn (hàng chục ms)"],
+    ["Chi phí / GB", "Cao", "Trung bình – cao", "Thấp"],
+    ["Phù hợp", "CSDL, hệ điều hành", "Dùng chung giữa nhiều máy", "File người dùng, sao lưu, media, data lake"],
+], [3.2, 4.0, 4.2, 4.6])
+P("Vì nhu cầu của đề tài là lưu file do người dùng tải lên (ghi một lần, đọc nhiều lần, kích thước từ vài KB tới hàng trăm MB, số lượng "
+  "không biết trước), object storage là lựa chọn tối ưu về chi phí và khả năng mở rộng; CSDL quan hệ chỉ giữ phần metadata nhỏ.")
+table("Khái niệm cốt lõi của Amazon S3 và cách đề tài sử dụng", ["Khái niệm", "Ý nghĩa", "Áp dụng trong Nimbus Drive"], [
+    ["Bucket", "Thùng chứa có tên duy nhất toàn cầu, gắn với một vùng (region)", "1 bucket cho toàn hệ thống: nimbus-files-<hậu tố ngẫu nhiên>"],
+    ["Object key", "Tên duy nhất của object trong bucket (phẳng, “/” chỉ là ký tự)", "owner/<uuid> – không chứa tên file gốc để tránh trùng và lộ thông tin"],
+    ["Versioning", "Giữ nhiều phiên bản của cùng một key", "Bật; lifecycle xóa phiên bản cũ sau 30 ngày"],
+    ["SSE-S3", "Mã hóa phía server bằng khóa do S3 quản lý (AES-256)", "Bật mặc định bằng Terraform"],
+    ["Block Public Access", "Chặn mọi cấu hình làm bucket công khai", "Bật cả 4 cờ; truy cập chỉ qua IAM hoặc presigned URL"],
+    ["Presigned URL", "URL ký sẵn, tự hết hạn, ủy quyền tạm thời", "Tải file 15 phút, kèm Content-Disposition đúng tên file"],
+    ["Lifecycle rule", "Tự động chuyển lớp lưu trữ / xóa theo tuổi", "Hủy multipart dở sau 7 ngày, xóa phiên bản cũ sau 30 ngày"],
+    ["CORS", "Cho phép trình duyệt gọi S3 từ origin khác", "Cho phép GET/HEAD để xem trước bằng presigned URL"],
+], [3.0, 6.0, 7.0])
+P("Về tính nhất quán, từ tháng 12/2020 Amazon S3 đảm bảo **strong read-after-write consistency** cho mọi thao tác PUT/DELETE, nên "
+  "ứng dụng có thể đọc ngay sau khi ghi mà không cần cơ chế thử lại. Điều này đơn giản hóa luồng upload → hiển thị ảnh thu nhỏ trong giao diện.")
 
 H2("2.3. Container hóa với Docker")
 P("Container đóng gói ứng dụng cùng toàn bộ thư viện phụ thuộc thành **image** bất biến, chạy cô lập trên nhân hệ điều hành "
@@ -382,9 +435,58 @@ table("Công nghệ sử dụng", ["Thành phần", "Công nghệ", "Vai trò"],
 # =====================================================================
 # CHUONG 3
 # =====================================================================
+H2("2.7. Xác thực bằng JWT và băm mật khẩu BCrypt")
+P("**JSON Web Token (RFC 7519)** gồm ba phần mã hóa Base64URL ngăn cách bởi dấu chấm: header (thuật toán, ví dụ HS256), payload "
+  "(các claim như sub – tên người dùng, iat – thời điểm phát hành, exp – thời điểm hết hạn) và chữ ký HMAC-SHA256 tính bằng khóa bí mật "
+  "của server. Server không cần lưu phiên: mỗi request mang theo token, server kiểm tra chữ ký và thời hạn rồi tin vào claim bên trong. "
+  "Ưu điểm là **stateless**, dễ chạy nhiều instance phía sau load balancer; nhược điểm là không thu hồi được token trước hạn nếu không "
+  "có danh sách đen, vì vậy đề tài đặt thời hạn 24 giờ và để dành refresh token ở hướng phát triển.")
+P("**BCrypt** là hàm băm mật khẩu thích ứng: có muối (salt) ngẫu nhiên cho từng mật khẩu và tham số chi phí (cost) làm phép băm chậm có "
+  "chủ đích, khiến việc dò mật khẩu bằng GPU trở nên tốn kém. Hệ thống dùng cost mặc định của Spring Security và chỉ lưu chuỗi băm "
+  "(60 ký tự) – không bao giờ lưu hay trả về mật khẩu gốc.")
+
+H2("2.8. Quản lý schema, kiểm thử và giám sát")
+bullets([
+    "**Flyway** áp dụng các script SQL đánh số phiên bản (V1__init.sql) theo thứ tự khi ứng dụng khởi động và ghi lịch sử vào bảng "
+    "flyway_schema_history; nhờ đó mọi môi trường có cùng schema và thay đổi được review như mã nguồn.",
+    "**Testcontainers** khởi chạy PostgreSQL và SeaweedFS thật bằng Docker ngay trong bài test, loại bỏ tình trạng “chạy được trên máy "
+    "tôi” do dùng mock khác với dịch vụ thật.",
+    "**Micrometer + Prometheus** thu thập metric theo mô hình pull: Prometheus định kỳ gọi /actuator/prometheus; Grafana truy vấn bằng "
+    "PromQL để vẽ biểu đồ (số request, độ trễ phân vị 95, heap JVM, số kết nối pool).",
+    "**RFC 7807 Problem Details** chuẩn hóa thân phản hồi lỗi (type, title, status, detail) để client xử lý thống nhất.",
+])
+
+H2("2.9. Presigned URL so với tải qua máy chủ ứng dụng")
+table("Hai cách phục vụ nội dung file", ["Tiêu chí", "Tải qua máy chủ ứng dụng", "Presigned URL tới S3"], [
+    ["Đường đi dữ liệu", "S3 → app → trình duyệt", "S3 → trình duyệt (trực tiếp)"],
+    ["Tải cho app (CPU, băng thông)", "Cao: app phải stream toàn bộ file", "Gần như bằng 0"],
+    ["Kiểm soát quyền", "Mỗi request đi qua JWT filter", "Quyền được ‘đóng gói’ vào URL, hết hạn sau 15 phút"],
+    ["Yêu cầu hạ tầng", "Chỉ cần mở cổng app", "Trình duyệt phải truy cập được endpoint S3 (CORS)"],
+    ["Dùng trong đề tài", "Tải xuống và xem trước trong giao diện (kèm JWT)", "Menu “Link S3 tạm thời (15 phút)” và API /presign"],
+], [4.0, 6.0, 6.0])
+P("Đề tài hỗ trợ cả hai: luồng đi qua ứng dụng đảm bảo mọi truy cập đều được xác thực và đếm lượt; presigned URL dành cho tải file lớn "
+  "để giải phóng máy chủ. Khi chạy với LocalObjectStorage (dev), API presign trả 501 Not Implemented vì không có S3 phía sau (có test kiểm tra hành vi này).")
+
 H1("Phân tích và thiết kế hệ thống")
 H2("3.1. Yêu cầu chức năng")
 figure(os.path.join(FIG, "usecase.png"), "Sơ đồ use case tổng quát", 14.5)
+table("Đặc tả một số use case chính", ["Use case", "Tiền điều kiện", "Luồng chính", "Luồng thay thế / lỗi"], [
+    ["UC1. Upload file", "Đã đăng nhập; thư mục đích thuộc về mình",
+     "Chọn/kéo file → hệ thống kiểm tra quota → ghi S3 → ghi metadata → hiện trong danh sách",
+     "Quá quota → 413; file rỗng → 400; storage lỗi → 502; DB lỗi → xóa object vừa ghi"],
+    ["UC2. Chia sẻ file", "Là chủ sở hữu file",
+     "Chọn file → chọn thời hạn (1 giờ … 30 ngày hoặc vô hạn) → nhận link /share.html?t=<token>",
+     "File của người khác → 404; link quá hạn khi khách mở → 410"],
+    ["UC3. Khách tải file", "Có link còn hiệu lực",
+     "Mở link → xem tên, kích thước, loại → bấm Tải xuống → tăng download_count",
+     "Link bị thu hồi → 404; file đã bị xóa → 404"],
+    ["UC4. Xóa thư mục", "Là chủ sở hữu thư mục",
+     "Xác nhận → xóa đệ quy thư mục con và file → xóa object trên S3 sau khi commit",
+     "Thư mục của người khác → 404"],
+    ["UC5. Đăng nhập", "Có tài khoản",
+     "Nhập tên + mật khẩu → nhận JWT → chuyển tới trang quản lý file",
+     "Sai 5 lần liên tiếp → khóa 5 phút (429); sai thông tin → 401"],
+], [2.8, 3.2, 5.6, 4.4])
 table("Yêu cầu chức năng", ["Mã", "Chức năng", "Mô tả"], [
     ["F01", "Đăng ký / đăng nhập", "Tên đăng nhập 3–50 ký tự [A-Za-z0-9._-], mật khẩu ≥ 6 ký tự; trả về JWT hạn 24 giờ"],
     ["F02", "Upload file", "Kéo-thả hoặc chọn nhiều file, hiển thị tiến độ; giới hạn 100 MB/file, kiểm tra quota"],
@@ -433,6 +535,29 @@ table("Mô tả các bảng", ["Bảng", "Mục đích", "Ràng buộc đáng ch
 ], [2.6, 6, 7.4])
 P("Schema được quản lý bằng **Flyway** (V1__init.sql); Hibernate đặt ddl-auto = none để tránh thay đổi schema ngầm định ở production. "
   "Cùng một script migration chạy được trên PostgreSQL (production) và H2 chế độ PostgreSQL (dev/test).")
+table("Từ điển dữ liệu – bảng users và folders", ["Cột", "Kiểu", "Ràng buộc", "Ý nghĩa"], [
+    ["users.id", "BIGINT identity", "PK", "Khóa chính tự tăng"],
+    ["users.username", "VARCHAR(50)", "NOT NULL, UNIQUE", "Tên đăng nhập, dùng làm định danh owner ở các bảng khác"],
+    ["users.password_hash", "VARCHAR(100)", "NOT NULL", "Chuỗi băm BCrypt (60 ký tự)"],
+    ["users.quota_bytes", "BIGINT", "NOT NULL", "Hạn mức dung lượng, mặc định 1.073.741.824 byte (1 GB)"],
+    ["users.created_at", "TIMESTAMPTZ", "NOT NULL", "Thời điểm tạo tài khoản (“thành viên từ”)"],
+    ["folders.id", "UUID", "PK", "Sinh ở phía ứng dụng để không lộ thứ tự tạo"],
+    ["folders.name", "VARCHAR(255)", "NOT NULL", "Tên đã được làm sạch (FileNames.clean)"],
+    ["folders.parent_id", "UUID", "FK folders.id, ON DELETE CASCADE", "NULL = thư mục gốc; xóa cha thì xóa luôn con"],
+    ["folders.owner", "VARCHAR(50)", "NOT NULL, index (owner, parent_id)", "Chủ sở hữu; mọi truy vấn đều lọc theo cột này"],
+], [3.4, 2.8, 4.6, 5.2])
+table("Từ điển dữ liệu – bảng files và share_links", ["Cột", "Kiểu", "Ràng buộc", "Ý nghĩa"], [
+    ["files.object_key", "VARCHAR(255)", "NOT NULL, UNIQUE", "Khóa object trên S3: owner/<uuid>"],
+    ["files.original_name", "VARCHAR(255)", "NOT NULL", "Tên hiển thị, đã loại ký tự nguy hiểm"],
+    ["files.content_type", "VARCHAR(255)", "NULL được", "MIME type; suy từ phần mở rộng nếu client gửi octet-stream"],
+    ["files.size", "BIGINT", "NOT NULL", "Số byte; dùng cộng dồn để kiểm tra quota"],
+    ["files.folder_id", "UUID", "FK folders.id", "NULL = ở thư mục gốc; xóa thư mục xử lý ở tầng service để dọn object"],
+    ["files.starred", "BOOLEAN", "DEFAULT FALSE", "Đánh dấu sao"],
+    ["share_links.token", "VARCHAR(64)", "NOT NULL, UNIQUE", "24 byte ngẫu nhiên mã hóa Base64URL (32 ký tự)"],
+    ["share_links.file_id", "UUID", "FK files.id, ON DELETE CASCADE", "File được chia sẻ; xóa file thì link biến mất"],
+    ["share_links.expires_at", "TIMESTAMPTZ", "NULL được", "NULL = không hết hạn"],
+    ["share_links.download_count", "INT", "DEFAULT 0", "Số lượt khách đã tải"],
+], [3.8, 2.6, 4.4, 5.2])
 
 H2("3.6. Thiết kế API")
 table("Các endpoint REST chính", ["Method", "Endpoint", "Mô tả"], [
@@ -450,6 +575,34 @@ table("Các endpoint REST chính", ["Method", "Endpoint", "Mô tả"], [
 ], [3.6, 6.6, 5.8])
 P("Lỗi được trả về theo chuẩn **RFC 7807 Problem Details** (application/problem+json) với thông điệp tiếng Việt, ví dụ 413 "
   "“Vượt quá dung lượng cho phép”, 429 khi đăng nhập sai quá nhiều, 410 khi link chia sẻ hết hạn, 502 khi không kết nối được storage.")
+table("Bảng mã trạng thái HTTP của API", ["Mã", "Khi nào", "Ví dụ"], [
+    ["200 / 201 / 204", "Thành công / tạo mới / xóa thành công", "POST /api/files → 201; DELETE /api/files/{id} → 204"],
+    ["400", "Dữ liệu không hợp lệ (Bean Validation), file rỗng", "Mật khẩu ngắn hơn 6 ký tự; upload file 0 byte"],
+    ["401", "Thiếu/sai/hết hạn JWT hoặc sai mật khẩu", "Gọi /api/me không có header Authorization"],
+    ["404", "Không tồn tại hoặc không thuộc về người dùng", "Truy cập file của người khác; link đã thu hồi"],
+    ["409", "Trùng tài khoản", "Đăng ký username đã tồn tại"],
+    ["410", "Link chia sẻ hết hạn", "Khách mở link sau expires_at"],
+    ["413", "Vượt quota hoặc quá kích thước tối đa", "Upload khi đã dùng hết 1 GB; file > 100 MB"],
+    ["429", "Đăng nhập sai quá nhiều lần", "Lần sai thứ 5 → khóa 5 phút"],
+    ["501", "Backend lưu trữ không hỗ trợ tính năng", "Presigned URL khi chạy LocalObjectStorage"],
+    ["502", "Không kết nối được object storage", "SeaweedFS/S3 chưa sẵn sàng hoặc sai credential"],
+], [2.6, 6.2, 7.2])
+P("Ví dụ gọi API bằng curl (thân phản hồi rút gọn):", indent=False)
+code("""# 1. Đăng ký và lấy token
+curl -s -X POST http://localhost:8080/api/auth/register -H "Content-Type: application/json" \\
+     -d '{"username":"alice","password":"secret123"}'
+# -> 201 {"token":"eyJhbGciOi...","username":"alice","expiresInMs":86400000}
+
+# 2. Upload file vào thư mục gốc
+curl -s -X POST http://localhost:8080/api/files -H "Authorization: Bearer $TOKEN" -F "file=@report.pdf"
+# -> 201 {"id":"3f1c...","name":"report.pdf","contentType":"application/pdf","size":182340,"starred":false,...}
+
+# 3. Tạo link chia sẻ 7 ngày
+curl -s -X POST http://localhost:8080/api/files/3f1c.../shares -H "Authorization: Bearer $TOKEN" \\
+     -H "Content-Type: application/json" -d '{"expiresInHours":168}'
+
+# 4. Khách tải không cần đăng nhập
+curl -OJ http://localhost:8080/api/public/shares/<token>/download""")
 
 H2("3.7. Luồng xử lý upload và tải qua presigned URL")
 figure(os.path.join(FIG, "sequence.png"), "Sơ đồ tuần tự upload file và tải trực tiếp bằng presigned URL")
@@ -471,6 +624,31 @@ table("Các biện pháp bảo mật", ["Mối đe dọa", "Biện pháp"], [
     ["Lộ dữ liệu trên S3", "Block Public Access, mã hóa SSE-S3, versioning, BucketOwnerEnforced"],
     ["Nghe lén", "HTTPS qua Caddy (Let’s Encrypt), app chỉ lắng nghe 127.0.0.1 trên EC2"],
 ], [4.6, 11.4])
+figure(os.path.join(FIG, "defense.png"), "Mô hình phòng thủ nhiều lớp (defense in depth)", 14.5)
+H3("3.8.1. Luồng xác thực JWT")
+figure(os.path.join(FIG, "auth_flow.png"), "Luồng đăng nhập và gọi API bằng Bearer token", 15.5)
+P("Khi đăng nhập, LoginAttemptService kiểm tra tài khoản có đang bị khóa không; nếu mật khẩu đúng, bộ đếm sai được xóa và JwtService "
+  "ký token HMAC-SHA (HS256 trở lên, thư viện JJWT tự chọn theo độ dài khóa) với khóa tối thiểu 32 ký tự lấy từ biến môi trường JWT_SECRET. "
+  "Với mỗi request tiếp theo, JwtAuthFilter đọc header Authorization, xác minh chữ ký và thời hạn rồi đặt tên người dùng làm principal; "
+  "mọi service nhận tên này làm tham số owner nên không thể truy vấn dữ liệu của người khác ngay cả khi client gửi sai id.")
+H3("3.8.2. Vòng đời link chia sẻ")
+figure(os.path.join(FIG, "share_state.png"), "Các trạng thái của link chia sẻ công khai", 14.5)
+P("Link công khai là ngoại lệ duy nhất của nguyên tắc “mọi thứ yêu cầu đăng nhập”, nên được thiết kế chặt: token 192 bit không thể đoán "
+  "(2^192 khả năng), có thời hạn tùy chọn, thu hồi được bất cứ lúc nào, và trang công khai chỉ trả thông tin tối thiểu (tên, kích thước, loại, "
+  "người chia sẻ). Mỗi lượt tải qua link cũng đi qua cùng cơ chế chống XSS như tải thông thường.")
+
+H2("3.9. Các quyết định thiết kế quan trọng")
+table("Bảng quyết định kiến trúc (ADR rút gọn)", ["Vấn đề", "Phương án đã chọn", "Lý do", "Đánh đổi"], [
+    ["Nơi lưu nội dung file", "Object storage chuẩn S3", "Rẻ, bền, mở rộng; có presigned URL", "Độ trễ cao hơn ổ đĩa cục bộ"],
+    ["Cấu trúc thư mục", "Thư mục ảo trong PostgreSQL", "Đổi tên/di chuyển không copy dữ liệu; truy vấn dễ", "Cần xử lý xóa đệ quy ở tầng service"],
+    ["Đặt key object", "owner/<uuid>, không dùng tên file", "Tránh trùng, tránh ký tự lạ, không lộ tên", "Không duyệt được bucket bằng mắt thường"],
+    ["Xác thực", "JWT stateless", "Không cần session store; dễ scale ngang", "Khó thu hồi trước hạn"],
+    ["Truy cập tài nguyên người khác", "Trả 404 thay vì 403", "Không lộ sự tồn tại của tài nguyên", "Khó phân biệt lỗi khi debug"],
+    ["Quản lý schema", "Flyway, ddl-auto = none", "Schema có phiên bản, an toàn ở production", "Phải viết SQL thủ công"],
+    ["Frontend", "JavaScript thuần, không bước build", "CSP chặt, dễ triển khai, ít phụ thuộc", "Mã giao diện dài hơn so với dùng framework"],
+    ["Hạ tầng AWS", "1 EC2 + S3 qua Terraform", "Đơn giản, chi phí thấp, đủ chứng minh khái niệm", "Không có Multi-AZ, DB là điểm lỗi đơn"],
+    ["Thứ tự ghi", "S3 trước, DB sau; xóa DB trước, S3 sau", "Không bao giờ có metadata trỏ tới object không tồn tại", "Có thể sót object mồ côi nếu app sập giữa chừng"],
+], [3.2, 3.8, 4.8, 4.2])
 
 # =====================================================================
 # CHUONG 4
@@ -513,12 +691,53 @@ return Optional.of(presigner.presignGetObject(p -> p.signatureDuration(ttl)
         .getObjectRequest(request)).url());""")
 P("Khi khởi động, S3ObjectStorage.ensureBucket() kiểm tra (HeadBucket) và tạo bucket nếu chưa có, thử lại tối đa 10 lần cách nhau 3 giây "
   "để chịu được việc storage khởi động chậm hơn ứng dụng trong Docker Compose.")
+H3("4.2.1. Thứ tự ghi dữ liệu khi upload và xóa")
+P("Do dữ liệu nằm ở hai nơi (S3 và PostgreSQL) không có giao dịch phân tán, mã nguồn phải chọn thứ tự thao tác sao cho **lỗi ở bất kỳ "
+  "bước nào cũng không để lại metadata trỏ tới object không tồn tại**. Khi upload, object được ghi trước; chỉ khi ghi metadata thất bại mới "
+  "phải dọn dẹp. Khi xóa, metadata bị xóa trong transaction và object chỉ bị xóa sau khi transaction commit.")
+code("""// FileService.upload – ghi S3 trước, DB sau, lỗi DB thì xóa object
+storage.put(key, in, file.getSize(), type);
+try {
+    FileMeta meta = files.save(new FileMeta(id, key, name, type, file.getSize(), owner, folderId));
+    uploads.increment();                       // metric nghiệp vụ
+    uploadBytes.record(file.getSize());
+    return meta;
+} catch (RuntimeException e) {
+    storage.delete(key);                       // không để object mồ côi
+    throw e;
+}
+
+// FileService.deleteAll – chỉ xóa object SAU KHI commit DB thành công
+TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+    @Override public void afterCommit() { removeObjects.run(); }
+});""")
+P("Trường hợp còn lại duy nhất là ứng dụng bị tắt đột ngột giữa hai bước, khi đó có thể còn một object không có metadata (rác nhưng "
+  "không gây lỗi hay lộ dữ liệu). Hướng phát triển đề xuất một job định kỳ đối chiếu danh sách object với bảng files để dọn rác.")
+H3("4.2.2. Kiểm soát quyền sở hữu, quota và tên file")
+bullets([
+    "**Quyền sở hữu:** mọi phương thức service đều nhận tham số owner lấy từ JWT và gọi findOwned; kết quả không thuộc owner bị coi như không tồn tại (404).",
+    "**Quota:** trước khi ghi, hệ thống cộng dồn dung lượng đã dùng (SUM size theo owner) và từ chối nếu tổng vượt quota_bytes.",
+    "**Tên file:** FileNames.clean cắt phần đường dẫn (cả / và \\), loại ký tự điều khiển, từ chối “.” và “..”, giới hạn 255 ký tự; tên gốc chỉ "
+    "để hiển thị, không bao giờ dùng làm đường dẫn trên storage.",
+    "**Kiểu nội dung:** nếu client gửi application/octet-stream, hệ thống suy ra MIME từ phần mở rộng (MediaTypeFactory) để xem trước đúng.",
+])
 
 H2("4.3. Giao diện người dùng")
 P("Giao diện là SPA viết bằng JavaScript thuần, không cần bước build, được Spring Boot phục vụ dưới dạng tài nguyên tĩnh. "
   "Các thành phần chính: trang đăng nhập/đăng ký, trang quản lý file (sidebar điều hướng, thanh tìm kiếm, breadcrumb, "
   "lưới/danh sách, menu ngữ cảnh, hộp thoại xem trước, chia sẻ, di chuyển), bảng tiến độ upload và trang tải công khai. "
   "Upload dùng XMLHttpRequest để có sự kiện tiến độ; ảnh thu nhỏ và bản xem trước được tải bằng fetch kèm JWT rồi hiển thị qua blob URL.")
+table("Các tệp giao diện và trách nhiệm", ["Tệp", "Dòng", "Trách nhiệm"], [
+    ["index.html + js/auth.js", "71", "Đăng nhập/đăng ký, lưu JWT, chuyển hướng, hiển thị lỗi từ server"],
+    ["app.html + js/app.js", "745", "Trang chính: gọi API, vẽ lưới/danh sách, upload có tiến độ, kéo-thả, menu ngữ cảnh, xem trước, chia sẻ, phím tắt"],
+    ["js/common.js", "228", "Hàm dùng chung: gọi API kèm JWT, định dạng dung lượng/ngày, icon, toast, hộp thoại, chuyển giao diện sáng/tối"],
+    ["share.html + js/share.js", "45", "Trang công khai cho khách: đọc token trên URL, hiển thị thông tin file và nút tải"],
+    ["css/style.css", "347", "Hệ thống thiết kế bằng biến CSS (màu, bo góc, bóng), hai bộ màu sáng/tối, bố cục responsive"],
+], [4.6, 1.4, 10.0])
+P("Giao diện được thiết kế lại với bảng màu **mực và sâm panh** (ink & champagne), tiêu đề dùng phông có chân để tạo cảm giác biên tập, "
+  "và nút chuyển chế độ sáng/tối ở thanh trên. Toàn bộ màu sắc là biến CSS (custom property) nên chế độ tối chỉ cần ghi đè các biến, "
+  "không nhân đôi stylesheet. Vì CSP chỉ cho phép script từ cùng origin, không có script hay thuộc tính onclick nhúng trong HTML; mọi sự kiện "
+  "được gắn bằng addEventListener và dữ liệu hiển thị luôn được escape trước khi đưa vào DOM.")
 
 H2("4.4. Container hóa")
 H3("4.4.1. Dockerfile nhiều giai đoạn")
@@ -549,6 +768,19 @@ table("Các service trong docker-compose.yml", ["Service", "Image", "Vai trò"],
 ], [3.2, 5.0, 7.8])
 P("File docker-compose.aws.yml ghi đè cho môi trường AWS: tắt SeaweedFS, để trống endpoint và access key (dùng Amazon S3 thật qua IAM role), "
   "và chỉ mở cổng app trên 127.0.0.1 để mọi truy cập bên ngoài phải đi qua Caddy.")
+table("Các biến môi trường cấu hình (nguyên tắc 12-factor)", ["Biến", "Mặc định", "Ý nghĩa"], [
+    ["DB_URL, DB_USER, DB_PASSWORD", "localhost / cloudfs", "Kết nối PostgreSQL; mật khẩu sinh ngẫu nhiên trên AWS"],
+    ["STORAGE_TYPE", "s3", "s3 (AWS S3, SeaweedFS, MinIO…) hoặc local (thư mục, chỉ để phát triển)"],
+    ["S3_ENDPOINT", "http://localhost:8333", "Để trống = Amazon S3 thật; có giá trị = S3-compatible tự host"],
+    ["S3_PUBLIC_ENDPOINT", "(= S3_ENDPOINT)", "Địa chỉ mà trình duyệt truy cập được, dùng ký presigned URL"],
+    ["S3_REGION, S3_BUCKET", "us-east-1 / cloudfs", "Vùng và tên bucket"],
+    ["S3_ACCESS_KEY, S3_SECRET_KEY", "cloudfs", "Để trống trên AWS → dùng IAM instance profile"],
+    ["S3_PATH_STYLE", "true", "true cho SeaweedFS/MinIO; false cho Amazon S3"],
+    ["JWT_SECRET, JWT_EXPIRATION_MS", "đổi khi deploy / 86400000", "Khóa ký (≥ 32 ký tự) và thời hạn token (24 giờ)"],
+    ["DEFAULT_QUOTA_BYTES, MAX_FILE_SIZE", "1 GB / 100 MB", "Hạn mức mỗi người dùng và kích thước tối đa mỗi file"],
+    ["JAVA_OPTS", "MaxRAMPercentage=75, G1GC", "Tham số JVM, tự co giãn theo giới hạn bộ nhớ container (768 MB)"],
+    ["DOMAIN, APP_IMAGE, APP_PORT", "localhost / nimbus-drive:local / 8080", "Tên miền cho Caddy, image cần chạy, cổng công bố"],
+], [4.6, 4.0, 7.4])
 
 H2("4.5. Pipeline CI/CD với GitHub Actions")
 figure(os.path.join(FIG, "cicd.png"), "Pipeline CI/CD tự động")
@@ -559,6 +791,17 @@ table("Các job trong pipeline", ["Job", "Kích hoạt", "Nội dung"], [
 ], [2.2, 4.0, 9.8])
 P("Image production được gắn tag theo commit nên có thể truy vết và **rollback** bằng cách triển khai lại tag cũ. "
   "Job deploy gắn với GitHub Environment “production”, cho phép bật duyệt thủ công (required reviewers) nếu cần.")
+table("Cấu hình GitHub cần thiết cho bước deploy", ["Loại", "Tên", "Giá trị / mục đích"], [
+    ["Variable", "DEPLOY_ENABLED", "true để bật job deploy; false để chỉ build, test, đẩy image (không đụng tới server)"],
+    ["Variable", "APP_URL", "Địa chỉ hiển thị trong Environment production, ví dụ http://<Elastic IP>"],
+    ["Secret", "DEPLOY_HOST", "Elastic IP của EC2 (output public_ip của Terraform)"],
+    ["Secret", "DEPLOY_USER", "ubuntu (người dùng mặc định của AMI Ubuntu)"],
+    ["Secret", "DEPLOY_SSH_KEY", "Khóa riêng của key pair EC2; không bao giờ commit vào repo"],
+    ["Tự động", "GITHUB_TOKEN", "Cấp quyền packages: write cho job image và packages: read cho job deploy để server kéo image từ GHCR"],
+], [2.4, 4.2, 9.4])
+P("Pipeline áp dụng một số thực hành an toàn: nhóm concurrency hủy các lần chạy cũ khi có push mới trên cùng nhánh; hành động Trivy được ghim theo "
+  "mã commit (SHA) thay vì thẻ phiên bản để tránh bị thay đổi ngầm; báo cáo test và độ phủ được lưu 14 ngày; và một bước riêng kiểm tra "
+  "failsafe-summary.xml có skipped = 0 để pipeline không báo xanh giả khi integration test bị bỏ qua.")
 
 H2("4.6. Hạ tầng AWS bằng Terraform")
 figure(os.path.join(FIG, "aws.png"), "Kiến trúc triển khai trên AWS")
@@ -574,11 +817,50 @@ cp terraform.tfvars.example terraform.tfvars   # key_name, app_image, domain
 terraform init
 terraform plan
 terraform apply        # output: public_ip, bucket, app_url""")
+table("Biến Terraform chính", ["Biến", "Mặc định", "Ý nghĩa"], [
+    ["region", "ap-southeast-1 (đặt ap-southeast-2 khi triển khai)", "Vùng AWS"],
+    ["instance_type, disk_gb", "t3.small, 20", "Cấu hình máy chủ và dung lượng ổ EBS gp3"],
+    ["key_name", "(bắt buộc)", "Tên EC2 key pair để SSH và để GitHub Actions deploy"],
+    ["ssh_cidrs", "0.0.0.0/0", "Dải IP được SSH; nên thu hẹp lại, GitHub-hosted runner cần dải rộng"],
+    ["domain", "(trống)", "Có tên miền thì Caddy tự xin chứng chỉ HTTPS; trống thì chỉ HTTP qua IP"],
+    ["app_image", "(bắt buộc)", "Image trên GHCR, ví dụ ghcr.io/<owner>/<repo>:latest"],
+    ["force_destroy_bucket", "false", "true cho phép terraform destroy xóa cả bucket còn dữ liệu (chỉ dùng khi demo)"],
+], [4.0, 5.0, 7.0])
+P("Các giá trị nhạy cảm (mật khẩu PostgreSQL, JWT_SECRET) được Terraform sinh bằng random_password và truyền vào user_data; chúng nằm trong "
+  "file .env phân quyền 600 trên EC2 và trong state của Terraform. Vì vậy file terraform.tfstate không được commit và nên đặt trên backend "
+  "từ xa (S3 + DynamoDB lock) khi làm việc nhóm.")
 
 H2("4.7. Giám sát")
 P("Spring Boot Actuator cung cấp /actuator/health (kèm liveness/readiness), /actuator/prometheus. Ngoài các metric có sẵn "
   "(HTTP request, độ trễ p95, JVM heap, kết nối Hikari), ứng dụng đăng ký metric nghiệp vụ nimbus.files.uploaded và "
   "nimbus.files.upload.bytes. Dashboard Grafana “Nimbus Drive – Overview” được provision tự động khi bật profile monitoring.")
+table("Các biểu đồ trên dashboard Grafana", ["Biểu đồ", "Nguồn metric", "Dùng để"], [
+    ["Uptime", "up của job nimbus-drive", "Biết ứng dụng còn sống để Prometheus scrape được không"],
+    ["HTTP requests / s", "http_server_requests_seconds_count", "Lưu lượng truy cập theo thời gian"],
+    ["p95 latency", "http_server_requests_seconds_bucket (histogram)", "Độ trễ phân vị 95, phát hiện chậm bất thường"],
+    ["5xx (5m)", "http_server_requests với status 5xx", "Tỷ lệ lỗi phía server trong 5 phút"],
+    ["Files uploaded / Bytes uploaded", "nimbus_files_uploaded, nimbus_files_upload_bytes", "Chỉ số nghiệp vụ: số file và dung lượng tải lên"],
+    ["JVM heap used", "jvm_memory_used_bytes", "Theo dõi bộ nhớ, phát hiện rò rỉ"],
+    ["DB connections (Hikari)", "hikaricp_connections_active", "Số kết nối CSDL đang dùng, phát hiện nghẽn pool"],
+], [4.2, 6.2, 5.6])
+P("Prometheus scrape mỗi 15 giây qua /actuator/prometheus. Endpoint này được Caddy trả 404 với truy cập từ Internet nên chỉ truy cập được "
+  "trong mạng Docker. Health check của Docker dùng /actuator/health/liveness, còn smoke test của pipeline dùng /actuator/health.")
+
+H2("4.8. Quy trình triển khai, nâng cấp và rollback")
+table("Quy trình triển khai từ đầu tới cuối", ["Bước", "Việc cần làm", "Lệnh / nơi thực hiện"], [
+    ["1", "Đăng nhập AWS và chuẩn bị key pair EC2", "aws login (hoặc aws configure); tạo key pair trong EC2 console"],
+    ["2", "Khai báo biến Terraform", "cp terraform.tfvars.example terraform.tfvars, điền key_name, app_image, region"],
+    ["3", "Tạo hạ tầng (S3, IAM, SG, EC2, EIP)", "terraform init && terraform apply"],
+    ["4", "Cấu hình GitHub: secrets, DEPLOY_ENABLED=true", "Repository → Settings → Secrets and variables"],
+    ["5", "Đẩy mã lên main để pipeline test, build, deploy", "git push origin main (hoặc Run workflow)"],
+    ["6", "Kiểm tra", "curl http://<Elastic IP>/actuator/health → UP; mở trang web, đăng ký và upload thử"],
+], [1.4, 7.0, 7.6])
+bullets([
+    "**Nâng cấp:** mỗi lần push lên main, job deploy kéo image mới theo tag sha-<commit> và chạy lại docker compose up -d; Flyway tự áp dụng migration mới.",
+    "**Rollback:** chạy lại workflow ở commit cũ (hoặc đặt APP_IMAGE về tag sha cũ trên server rồi docker compose up -d); dữ liệu không bị ảnh hưởng vì nằm ở volume PostgreSQL và bucket S3.",
+    "**Tạm dừng để tiết kiệm chi phí:** đặt DEPLOY_ENABLED=false để dừng tự động deploy; có thể dừng (stop) EC2 hoặc terraform destroy khi không dùng. Lưu ý Elastic IP vẫn bị tính phí theo giờ dù máy đã dừng.",
+    "**Dọn dẹp:** terraform destroy xóa toàn bộ tài nguyên; vì bucket bật versioning nên cần force_destroy_bucket = true nếu muốn xóa cả dữ liệu.",
+])
 
 # =====================================================================
 # CHUONG 5
@@ -607,6 +889,30 @@ P("**22/22 ca kiểm thử đạt** trên GitHub Actions: 18 ca unit/API và 4 c
   "độ phủ dòng lệnh của 18 ca chạy cục bộ đạt khoảng 80% (JaCoCo). Lần chạy CI đầu tiên cho thấy Testcontainers 1.19 không kết nối được "
   "Docker của runner nên 4 ca integration bị bỏ qua mà pipeline vẫn báo thành công. Nhóm đã nâng lên 1.21.4 và thêm bước làm pipeline "
   "thất bại nếu integration test bị bỏ qua.", indent=True)
+table("Danh sách 22 ca kiểm thử", ["Lớp test", "Ca kiểm thử", "Điều được kiểm chứng"], [
+    ["JwtServiceTest", "tokenRoundTripReturnsUsername", "Token sinh ra giải mã lại đúng tên người dùng"],
+    ["", "tokenSignedWithOtherSecretIsRejected", "Token ký bằng khóa khác bị từ chối"],
+    ["", "expiredTokenIsRejected", "Token hết hạn bị từ chối"],
+    ["UnitTests", "fileNamesStripPathsAndControlChars", "Bỏ đường dẫn, ký tự điều khiển; từ chối tên rỗng, “.”, “..”"],
+    ["", "categoriesFromTypeOrExtension", "Phân loại hình ảnh/video/tài liệu/mã nguồn/nén theo MIME hoặc đuôi file"],
+    ["", "shareTokensAreRandomAndUrlSafe", "Token chia sẻ khác nhau mỗi lần và chỉ chứa ký tự an toàn cho URL"],
+    ["", "loginLockResetsOnSuccess", "Bộ đếm đăng nhập sai được xóa sau khi đăng nhập đúng"],
+    ["ApiFlowTest", "protectedEndpointsRequireToken", "Endpoint nghiệp vụ trả 401 khi không có token"],
+    ["", "registerValidatesInputAndRejectsDuplicates", "Validate username/mật khẩu; trùng tài khoản trả 409"],
+    ["", "loginIsLockedAfterRepeatedFailures", "Sai 5 lần → 429, đúng mật khẩu vẫn bị khóa trong thời gian khóa"],
+    ["", "uploadListDownloadRenameDelete", "Vòng đời đầy đủ của một file và nội dung tải về khớp bản gốc"],
+    ["", "otherUsersCannotSeeMyFiles", "Người dùng khác nhận 404 khi truy cập file của tôi"],
+    ["", "quotaIsEnforced", "Upload vượt quota trả 413"],
+    ["", "foldersNestMoveAndDeleteRecursively", "Thư mục lồng nhau, di chuyển file, xóa đệ quy cả file bên trong"],
+    ["", "publicShareLinkWorksUntilRevoked", "Khách tải được qua link, đếm lượt, sau khi thu hồi trả 404"],
+    ["", "htmlIsNeverServedInline", "File HTML bị ép tải về dù yêu cầu inline (chống XSS)"],
+    ["", "presignIsNotAvailableOnLocalBackend", "Backend local trả 501 khi xin presigned URL"],
+    ["", "healthAndApiDocsArePublic", "/actuator/health và Swagger truy cập được không cần đăng nhập"],
+    ["PostgresMigrationIT", "schemaMatchesEntities", "Flyway + Hibernate validate trên PostgreSQL 16 thật"],
+    ["S3ObjectStorageIT", "putGetDeleteRoundTrip", "Ghi/đọc/xóa object trên SeaweedFS thật"],
+    ["", "presignedUrlDownloadsWithoutCredentials", "Presigned URL tải được bằng HTTP thuần, không cần credential"],
+    ["", "ensureBucketIsIdempotent", "Tạo bucket nhiều lần không lỗi"],
+], [3.4, 5.8, 6.8])
 
 H2("5.3. Triển khai thực tế trên AWS")
 P("Hệ thống đã được triển khai thật bằng terraform apply tại vùng ap-southeast-2 (Sydney), tạo 17 tài nguyên; image do pipeline "
@@ -648,6 +954,35 @@ bullets([
     "Bản triển khai trên AWS chỉ dùng HTTP qua địa chỉ IP vì chưa gắn tên miền, nên chưa có HTTPS.",
 ])
 
+H2("5.5. Các sự cố gặp phải và cách xử lý")
+P("Quá trình thực hiện phát sinh nhiều sự cố thật; phần lớn chỉ lộ ra khi chạy trên môi trường thật hoặc trên CI. Bảng dưới đây ghi lại "
+  "nguyên nhân gốc và cách khắc phục, là phần giá trị nhất để rút kinh nghiệm cho các dự án cloud sau này.")
+table("Nhật ký sự cố và bài học", ["Sự cố", "Nguyên nhân gốc", "Cách khắc phục", "Bài học"], [
+    ["Không tải được MinIO", "MinIO community ngừng phát hành bản dựng (dl.min.io trả 410 Gone)",
+     "Chuyển sang SeaweedFS 4.52, chỉ đổi cấu hình, không sửa mã nghiệp vụ", "Trừu tượng hóa nhà cung cấp bằng chuẩn mở có giá trị thực tế"],
+    ["CI xanh nhưng integration test không chạy", "Testcontainers 1.19 không kết nối được Docker của runner nên tự bỏ qua 4 ca",
+     "Nâng lên 1.21.4; thêm bước kiểm tra skipped = 0 trong failsafe-summary.xml", "Kiểm thử bị bỏ qua phải làm pipeline đỏ, không được âm thầm xanh"],
+    ["App trong container không lấy được credential IAM", "IMDSv2 mặc định hop limit = 1, container cần thêm 1 hop",
+     "http_put_response_hop_limit = 2 trong Terraform", "Thử trên môi trường thật sớm; mặc định bảo mật có thể phá giả định"],
+    ["Server không kéo được image từ GHCR", "Job deploy thiếu quyền packages: read; image mặc định private",
+     "Thêm permissions packages: read và docker login bằng GITHUB_TOKEN trong script deploy", "Ghi rõ quyền tối thiểu cho từng job"],
+    ["Trivy báo 65 lỗ hổng HIGH/CRITICAL", "Spring Boot 3.3 và các thư viện cũ (Tomcat, Netty, Jackson, PostgreSQL JDBC, httpcore5)",
+     "Nâng Spring Boot 3.5.16, ghi đè phiên bản các thư viện bị ảnh hưởng, chạy apt upgrade ở image chạy", "Còn 2 lỗi CRITICAL của spring-webmvc 6.2 chỉ vá ở Spring 7 → ghi nhận như rủi ro còn lại"],
+    ["Giao diện chưa nhất quán", "Giao diện ban đầu dùng bộ màu indigo – hồng, thiếu phân cấp thị giác",
+     "Thiết kế lại bằng biến CSS: bảng màu mực – sâm panh, phông có chân cho tiêu đề, chuyển sáng/tối", "Dùng design token ngay từ đầu để đổi giao diện không đụng logic"],
+], [3.0, 4.3, 4.6, 4.1])
+
+H2("5.6. Chi phí vận hành")
+table("Các thành phần chi phí khi chạy trên AWS", ["Thành phần", "Cách tính", "Cách tối ưu"], [
+    ["EC2 t3.small", "Theo giờ chạy (on-demand)", "Dừng máy khi không demo; dùng Savings Plan nếu chạy lâu dài"],
+    ["EBS gp3 20 GB", "Theo GB-tháng, tính cả khi máy dừng", "Giảm dung lượng ổ nếu không cần; xóa khi terraform destroy"],
+    ["Elastic IP / IPv4 công khai", "Từ 02/2024 AWS tính phí theo giờ cho mọi địa chỉ IPv4 công khai, kể cả đang gắn máy", "Giải phóng cùng terraform destroy khi không dùng"],
+    ["Amazon S3", "Theo GB lưu trữ, số request và dữ liệu ra Internet", "Lifecycle xóa phiên bản cũ; presigned URL giảm lưu lượng qua EC2"],
+    ["GitHub Actions, GHCR", "Miễn phí trong hạn mức repo công khai", "Bật cache Buildx (type=gha) để rút ngắn thời gian build"],
+], [3.4, 6.2, 6.4])
+P("Đơn giá cụ thể thay đổi theo vùng và thời điểm nên đồ án không nêu con số; có thể tính bằng AWS Pricing Calculator với cấu hình trên. "
+  "Với một máy t3.small và vài GB dữ liệu, chi phí chủ yếu đến từ EC2 và EBS, nên việc dừng hoặc hủy hạ tầng khi không sử dụng là biện pháp tiết kiệm hiệu quả nhất.")
+
 # =====================================================================
 # CHUONG 6
 # =====================================================================
@@ -667,6 +1002,14 @@ table("Đề xuất phát triển tiếp", ["Hướng", "Mô tả", "Ưu tiên"]
     ["Trải nghiệm", "Upload cả thư mục, thumbnail sinh phía server (S3 event + Lambda), tìm kiếm toàn văn", "Thấp"],
     ["Vận hành", "Cảnh báo Alertmanager, log tập trung (Loki/CloudWatch), staging environment, blue-green deploy", "Thấp"],
 ], [3.6, 10.0, 2.4])
+H2("6.3. Bài học kinh nghiệm")
+bullets([
+    "**Chuẩn mở là bảo hiểm:** việc bám chuẩn S3 và tách port/adapter giúp đổi MinIO sang SeaweedFS và chuyển giữa local/AWS mà không sửa nghiệp vụ.",
+    "**Thứ tự thao tác quan trọng hơn giao dịch phân tán:** với hai kho dữ liệu, chọn đúng thứ tự ghi/xóa đơn giản và hiệu quả hơn so với cố gắng làm giao dịch hai pha.",
+    "**Kiểm thử phải chạy được trên môi trường giống thật:** lỗi hop limit của IMDSv2 hay lỗi Testcontainers bị bỏ qua chỉ lộ ra khi chạy trên AWS hoặc CI.",
+    "**Bảo mật là quá trình liên tục:** quét Trivy cho thấy rủi ro thay đổi theo từng tuần; cần quy trình nâng cấp phụ thuộc định kỳ thay vì sửa một lần.",
+    "**Hạ tầng dưới dạng mã giúp tái tạo và dọn dẹp:** toàn bộ môi trường AWS dựng lên và hủy đi bằng một lệnh, rất phù hợp với bài toán học tập có ngân sách hạn chế.",
+])
 
 # =====================================================================
 # TAI LIEU THAM KHAO + PHU LUC
@@ -706,6 +1049,25 @@ P("**C. Kiểm thử:**", indent=False)
 code("""./mvnw verify      # báo cáo độ phủ: target/site/jacoco/index.html""")
 P("**D. Bật triển khai tự động:** tạo repo variable DEPLOY_ENABLED=true, APP_URL; secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY; "
   "sau đó mỗi lần push lên nhánh main, pipeline tự build, kiểm thử và triển khai.", indent=False)
+P("**E. Xử lý sự cố thường gặp:**", indent=False)
+table("Bảng xử lý sự cố", ["Hiện tượng", "Nguyên nhân thường gặp", "Cách kiểm tra / khắc phục"], [
+    ["App không khởi động, log “Connection refused” tới storage", "SeaweedFS/S3 chưa sẵn sàng hoặc sai S3_ENDPOINT", "docker compose logs seaweedfs; ứng dụng tự thử lại 10 lần × 3 giây"],
+    ["Upload trả 502", "Không kết nối được S3 hoặc sai credential/bucket", "Kiểm tra S3_BUCKET, S3_REGION, IAM role (trên AWS), docker compose logs app"],
+    ["Tải bằng presigned URL bị lỗi trong trình duyệt", "S3_PUBLIC_ENDPOINT trỏ tới địa chỉ trình duyệt không truy cập được; thiếu CORS", "Đặt S3_PUBLIC_ENDPOINT đúng địa chỉ công khai; kiểm tra cấu hình CORS của bucket"],
+    ["Trên EC2 app không lấy được credential", "IMDSv2 hop limit = 1", "Đặt http_put_response_hop_limit = 2 rồi terraform apply"],
+    ["Deploy thất bại ở bước pull image", "Image private, server chưa đăng nhập GHCR", "Kiểm tra quyền packages: read; docker login ghcr.io"],
+    ["Web không truy cập được từ Internet", "Instance dừng, Security Group, hoặc DEPLOY_ENABLED chưa bật", "aws ec2 describe-instances; kiểm tra SG mở 80/443; curl /actuator/health"],
+    ["Đăng nhập báo 429", "Sai mật khẩu 5 lần liên tiếp", "Chờ 5 phút hoặc khởi động lại ứng dụng (bộ đếm lưu trong RAM)"],
+], [4.6, 5.4, 6.0])
+P("**F. Các cổng và địa chỉ mặc định khi chạy Docker Compose:**", indent=False)
+table("Cổng dịch vụ", ["Dịch vụ", "Địa chỉ", "Ghi chú"], [
+    ["Ứng dụng web / API", "http://localhost:8080", "Trên AWS chỉ lắng nghe 127.0.0.1, truy cập qua Caddy"],
+    ["Swagger UI", "http://localhost:8080/swagger-ui.html", "Tài liệu OpenAPI tại /v3/api-docs"],
+    ["S3 (SeaweedFS)", "http://localhost:8333", "Cần cho presigned URL từ trình duyệt"],
+    ["Prometheus", "http://localhost:9090", "Profile monitoring"],
+    ["Grafana", "http://localhost:3000", "Profile monitoring; đổi mật khẩu quản trị mặc định"],
+    ["Caddy", "80 / 443", "Profile proxy; đặt DOMAIN để có HTTPS"],
+], [4.0, 6.0, 6.0])
 
 # ---------- footer page numbers ----------
 for s in doc.sections:
