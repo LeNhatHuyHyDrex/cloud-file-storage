@@ -31,7 +31,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         String detail = ex.getBindingResult().getFieldErrors().stream()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
-                .orElse("Dữ liệu không hợp lệ");
+                .orElse("Invalid data");
         return ResponseEntity.badRequest().body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail));
     }
 
@@ -40,18 +40,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                                                                          HttpHeaders headers, HttpStatusCode status,
                                                                          WebRequest request) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
-                ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, "File vượt quá kích thước tối đa cho phép"));
+                ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size"));
     }
 
     @ExceptionHandler(SdkException.class)
     public ProblemDetail storageError(SdkException ex) {
         log.error("Object storage error", ex);
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, "Không kết nối được tới kho lưu trữ, thử lại sau");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, "Could not connect to storage, please try again later");
     }
 
     @ExceptionHandler(IOException.class)
     public ProblemDetail ioError(IOException ex) {
         log.error("I/O error", ex);
-        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi đọc/ghi dữ liệu");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Data read/write error");
     }
 }

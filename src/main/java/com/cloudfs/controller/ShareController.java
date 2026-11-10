@@ -38,14 +38,14 @@ public class ShareController {
         this.files = files;
     }
 
-    @Operation(summary = "Các link chia sẻ tôi đã tạo")
+    @Operation(summary = "Share links I have created")
     @SecurityRequirement(name = "bearer")
     @GetMapping("/api/shares")
     public List<ShareDto> mine(Authentication auth) {
         return shares.list(auth.getName()).stream().map(s -> ShareDto.of(s, shares.fileName(s))).toList();
     }
 
-    @Operation(summary = "Thu hồi link chia sẻ")
+    @Operation(summary = "Revoke a share link")
     @SecurityRequirement(name = "bearer")
     @DeleteMapping("/api/shares/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -53,7 +53,7 @@ public class ShareController {
         shares.revoke(auth.getName(), id);
     }
 
-    @Operation(summary = "[Công khai] Thông tin file được chia sẻ")
+    @Operation(summary = "[Public] Shared file info")
     @GetMapping("/api/public/shares/{token}")
     public PublicShareDto info(@PathVariable String token) {
         var link = shares.resolve(token);
@@ -62,7 +62,7 @@ public class ShareController {
                 link.getExpiresAt(), FileCategory.of(f.getContentType(), f.getOriginalName()).id());
     }
 
-    @Operation(summary = "[Công khai] Tải file qua link chia sẻ")
+    @Operation(summary = "[Public] Download a file via share link")
     @GetMapping("/api/public/shares/{token}/download")
     public ResponseEntity<InputStreamResource> download(@PathVariable String token,
                                                         @RequestParam(defaultValue = "false") boolean inline)

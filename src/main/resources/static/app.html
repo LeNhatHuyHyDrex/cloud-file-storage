@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,15 +14,15 @@
 <div class="shell">
   <aside class="sidebar" id="sidebar">
     <div class="brand"><span class="logo"></span> Nimbus Drive</div>
-    <button class="btn primary block" id="btn-upload-side"><span data-icon="upload"></span> Tải lên</button>
+    <button class="btn primary block" id="btn-upload-side"><span data-icon="upload"></span> Upload</button>
     <nav class="nav" id="nav">
-      <button data-view="files" class="active"><span data-icon="home"></span>Tệp của tôi</button>
-      <button data-view="recent"><span data-icon="clock"></span>Gần đây</button>
-      <button data-view="starred"><span data-icon="star"></span>Có gắn sao</button>
-      <button data-view="shared"><span data-icon="link"></span>Link đã chia sẻ</button>
+      <button data-view="files" class="active"><span data-icon="home"></span>My files</button>
+      <button data-view="recent"><span data-icon="clock"></span>Recent</button>
+      <button data-view="starred"><span data-icon="star"></span>Starred</button>
+      <button data-view="shared"><span data-icon="link"></span>Shared links</button>
     </nav>
     <div class="storage-card" id="storage">
-      <div class="row"><b>Dung lượng</b><span class="small muted" id="storage-text">—</span></div>
+      <div class="row"><b>Storage</b><span class="small muted" id="storage-text">—</span></div>
       <div class="bar" id="storage-bar"></div>
       <div class="legend" id="storage-legend"></div>
       <div class="backend-pill" id="backend-pill">storage</div>
@@ -34,12 +34,12 @@
       <button class="icon-btn menu-btn" id="btn-menu" aria-label="Menu"><span data-icon="menu"></span></button>
       <div class="search input-icon">
         <span data-icon="search"></span>
-        <input class="input" id="search" type="search" placeholder="Tìm kiếm file trong toàn bộ kho..." autocomplete="off">
+        <input class="input" id="search" type="search" placeholder="Search all your files..." autocomplete="off">
         <span class="kbd">/</span>
       </div>
       <div class="spacer"></div>
-      <button class="icon-btn" id="btn-theme" title="Đổi giao diện sáng/tối"><span data-icon="moon"></span></button>
-      <button class="avatar" id="btn-user" title="Tài khoản">?</button>
+      <button class="icon-btn" id="btn-theme" title="Toggle light/dark theme"><span data-icon="moon"></span></button>
+      <button class="avatar" id="btn-user" title="Account">?</button>
     </header>
 
     <section class="content" id="content">
@@ -47,11 +47,11 @@
         <div class="crumbs" id="crumbs"></div>
         <div class="spacer"></div>
         <div class="view-toggle">
-          <button class="icon-btn active" data-layout="grid" title="Dạng lưới"><span data-icon="grid"></span></button>
-          <button class="icon-btn" data-layout="list" title="Dạng danh sách"><span data-icon="list"></span></button>
+          <button class="icon-btn active" data-layout="grid" title="Grid view"><span data-icon="grid"></span></button>
+          <button class="icon-btn" data-layout="list" title="List view"><span data-icon="list"></span></button>
         </div>
-        <button class="btn" id="btn-new-folder"><span data-icon="folderPlus"></span><span>Thư mục mới</span></button>
-        <button class="btn primary" id="btn-upload"><span data-icon="upload"></span><span>Tải lên</span></button>
+        <button class="btn" id="btn-new-folder"><span data-icon="folderPlus"></span><span>New folder</span></button>
+        <button class="btn primary" id="btn-upload"><span data-icon="upload"></span><span>Upload</span></button>
       </div>
       <div id="view"></div>
     </section>
@@ -61,12 +61,12 @@
 <input type="file" id="file-input" multiple hidden>
 
 <div class="drop-overlay hidden" id="drop">
-  <div class="box"><span data-icon="upload"></span><h3>Thả file để tải lên</h3><div class="muted" id="drop-target">vào Tệp của tôi</div></div>
+  <div class="box"><span data-icon="upload"></span><h3>Drop files to upload</h3><div class="muted" id="drop-target">to My files</div></div>
 </div>
 
 <div class="uploads hidden" id="uploads">
-  <div class="uploads-head"><span id="uploads-title">Đang tải lên</span><div class="spacer"></div>
-    <button class="icon-btn" id="uploads-close" title="Đóng"><span data-icon="x"></span></button></div>
+  <div class="uploads-head"><span id="uploads-title">Uploading</span><div class="spacer"></div>
+    <button class="icon-btn" id="uploads-close" title="Close"><span data-icon="x"></span></button></div>
   <div class="uploads-list" id="uploads-list"></div>
 </div>
 

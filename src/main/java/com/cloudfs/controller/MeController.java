@@ -38,7 +38,7 @@ public class MeController {
         this.fileService = fileService;
     }
 
-    @Operation(summary = "Thông tin tài khoản, dung lượng đã dùng và thống kê theo loại file")
+    @Operation(summary = "Account info, storage used and statistics by file type")
     @GetMapping
     public ProfileDto me(Authentication auth) {
         AppUser user = users.findByUsername(auth.getName())

@@ -10,10 +10,10 @@
   window.Nimbus.mountThemeToggle();
   document.getElementById("logo-hero").innerHTML = icon("cloud");
   document.getElementById("features").innerHTML = [
-    ["shield", "Bảo mật JWT", "Mật khẩu BCrypt, chống dò mật khẩu"],
-    ["server", "Chuẩn S3", "AWS S3, SeaweedFS, MinIO, Ceph..."],
-    ["share", "Chia sẻ link", "Link công khai có hạn dùng"],
-    ["zap", "CI/CD tự động", "Test, build image, deploy"]
+    ["shield", "JWT security", "BCrypt passwords, brute-force protection"],
+    ["server", "S3 standard", "AWS S3, SeaweedFS, MinIO, Ceph..."],
+    ["share", "Link sharing", "Public links with expiry"],
+    ["zap", "Automated CI/CD", "Test, build image, deploy"]
   ].map(([i, t, d]) => '<div class="feature"><b>' + icon(i) + esc(t) + "</b><span>" + esc(d) + "</span></div>").join("");
 
   let mode = "login";
@@ -27,7 +27,7 @@
   }
 
   if (new URLSearchParams(location.search).get("expired")) {
-    showError("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
+    showError("Your session has expired, please sign in again.");
   }
 
   function setMode(m) {
@@ -35,12 +35,12 @@
     document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
     const reg = m === "register";
     document.getElementById("confirm-field").classList.toggle("hidden", !reg);
-    document.getElementById("title").textContent = reg ? "Tạo tài khoản mới" : "Chào mừng trở lại";
+    document.getElementById("title").textContent = reg ? "Create a new account" : "Welcome back";
     document.getElementById("subtitle").textContent = reg
-      ? "Miễn phí 1 GB dung lượng lưu trữ."
-      : "Đăng nhập để truy cập kho file của bạn.";
+      ? "Free 1 GB of storage."
+      : "Sign in to access your files.";
     document.getElementById("password").autocomplete = reg ? "new-password" : "current-password";
-    submit.textContent = reg ? "Tạo tài khoản" : "Đăng nhập";
+    submit.textContent = reg ? "Create account" : "Sign in";
     showError("");
   }
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
@@ -50,22 +50,22 @@
     const username = form.username.value.trim();
     const password = form.password.value;
     if (!/^[A-Za-z0-9._-]{3,50}$/.test(username)) {
-      return showError("Tên đăng nhập 3–50 ký tự, chỉ gồm chữ, số và . _ -");
+      return showError("Username must be 3–50 characters: letters, digits and . _ - only");
     }
-    if (password.length < 6) return showError("Mật khẩu tối thiểu 6 ký tự");
+    if (password.length < 6) return showError("Password must be at least 6 characters");
     if (mode === "register" && password !== document.getElementById("confirm").value) {
-      return showError("Mật khẩu nhập lại không khớp");
+      return showError("Passwords do not match");
     }
     submit.disabled = true;
-    submit.textContent = "Đang xử lý...";
+    submit.textContent = "Processing...";
     try {
       const res = await api("/api/auth/" + mode, { method: "POST", body: { username, password }, auth: false });
       session.save(res.token, res.username);
       window.location.href = "/app.html";
     } catch (ex) {
-      showError(ex.status === 401 ? "Sai tài khoản hoặc mật khẩu" : ex.message);
+      showError(ex.status === 401 ? "Incorrect username or password" : ex.message);
       submit.disabled = false;
-      submit.textContent = mode === "register" ? "Tạo tài khoản" : "Đăng nhập";
+      submit.textContent = mode === "register" ? "Create account" : "Sign in";
     }
   });
 })();

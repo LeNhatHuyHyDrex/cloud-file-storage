@@ -24,7 +24,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Auth", description = "Đăng ký / đăng nhập, trả về JWT")
+@Tag(name = "Auth", description = "Sign up / log in, returns a JWT")
 public class AuthController {
 
     private final UserRepository users;
@@ -43,31 +43,31 @@ public class AuthController {
         this.defaultQuota = defaultQuota;
     }
 
-    @Operation(summary = "Tạo tài khoản mới")
+    @Operation(summary = "Create a new account")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
     public AuthResponse register(@Valid @RequestBody Credentials body) {
         if (users.existsByUsername(body.username())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tên đăng nhập đã tồn tại");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
         }
         users.save(new AppUser(body.username(), encoder.encode(body.password()), defaultQuota));
         return new AuthResponse(jwt.generateToken(body.username()), body.username(), jwt.expirationMs());
     }
 
-    @Operation(summary = "Đăng nhập", description = "Khóa tạm 5 phút sau 5 lần sai liên tiếp")
+    @Operation(summary = "Log in", description = "Locked for 5 minutes after 5 consecutive failed attempts")
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody Credentials body) {
         if (attempts.isLocked(body.username())) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Đăng nhập sai quá nhiều lần, vui lòng thử lại sau ít phút");
+                    "Too many failed login attempts, please try again in a few minutes");
         }
         AppUser user = users.findByUsername(body.username())
                 .filter(u -> encoder.matches(body.password(), u.getPasswordHash()))
                 .orElse(null);
         if (user == null) {
             attempts.failed(body.username());
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai tài khoản hoặc mật khẩu");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Incorrect username or password");
         }
         attempts.succeeded(body.username());
         return new AuthResponse(jwt.generateToken(user.getUsername()), user.getUsername(), jwt.expirationMs());

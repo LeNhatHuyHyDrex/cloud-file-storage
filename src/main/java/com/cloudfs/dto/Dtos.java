@@ -23,7 +23,7 @@ public final class Dtos {
 
     public record Credentials(
             @NotBlank @Size(min = 3, max = 50)
-            @Pattern(regexp = "[A-Za-z0-9._-]+", message = "chi gom chu, so, dau . _ -") String username,
+            @Pattern(regexp = "[A-Za-z0-9._-]+", message = "only letters, digits, . _ - allowed") String username,
             @NotBlank @Size(min = 6, max = 100) String password) {
     }
 

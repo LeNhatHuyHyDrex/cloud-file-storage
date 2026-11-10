@@ -38,7 +38,7 @@ public class FolderController {
         this.folders = folders;
     }
 
-    @Operation(summary = "Thư mục con của `parentId` (bỏ trống = gốc); `all=true` trả về mọi thư mục")
+    @Operation(summary = "Subfolders of `parentId` (empty = root); `all=true` returns every folder")
     @GetMapping
     public List<FolderDto> list(@RequestParam(required = false) UUID parentId,
                                 @RequestParam(defaultValue = "false") boolean all,
@@ -53,7 +53,7 @@ public class FolderController {
         return FolderDto.of(folders.create(auth.getName(), body.name(), body.parentId()));
     }
 
-    @Operation(summary = "Đường dẫn từ gốc tới thư mục (breadcrumb)")
+    @Operation(summary = "Path from root to the folder (breadcrumb)")
     @GetMapping("/{id}/path")
     public List<FolderDto> path(@PathVariable UUID id, Authentication auth) {
         return folders.path(auth.getName(), id).stream().map(FolderDto::of).toList();
@@ -64,7 +64,7 @@ public class FolderController {
         return FolderDto.of(folders.rename(auth.getName(), id, body.name()));
     }
 
-    @Operation(summary = "Xóa thư mục cùng toàn bộ nội dung bên trong")
+    @Operation(summary = "Delete a folder and everything inside it")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id, Authentication auth) {

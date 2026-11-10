@@ -23,6 +23,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  web:
+    # UI va thong bao loi deu bang tieng Anh, khong phu thuoc Accept-Language
+    locale: en
+    locale-resolver: fixed
   servlet:
     multipart:
       max-file-size: ${MAX_FILE_SIZE:100MB}

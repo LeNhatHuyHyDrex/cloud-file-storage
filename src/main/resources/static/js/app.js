@@ -54,7 +54,7 @@
         .filter((c) => p.bytesByCategory[c] > 0)
         .slice(0, 6)
         .map((c) => '<div><i style="background:var(--c-' + c + ')"></i>' + N.CAT_LABEL[c] + " · " + bytes(p.bytesByCategory[c]) + "</div>")
-        .join("") || '<div class="muted">Chưa có dữ liệu</div>';
+        .join("") || '<div class="muted">No data yet</div>';
       $("#backend-pill").textContent = (p.storageBackend === "s3" ? "S3 object storage" : "Local storage") + " · " + pct.toFixed(1) + "%";
     } catch (e) { /* api() da xu ly 401 */ }
   }
@@ -116,17 +116,17 @@
   window.addEventListener("popstate", fromHash);
 
   // ---------- Rendering ----------
-  const TITLES = { recent: "Gần đây", starred: "Có gắn sao", shared: "Link đã chia sẻ" };
+  const TITLES = { recent: "Recent", starred: "Starred", shared: "Shared links" };
 
   function renderCrumbs() {
     const c = $("#crumbs");
     if (state.view === "files") {
-      const parts = ['<button data-folder="">Tệp của tôi</button>'];
+      const parts = ['<button data-folder="">My files</button>'];
       state.path.forEach((f) => parts.push(icon("chevron") + '<button data-folder="' + f.id + '">' + esc(f.name) + "</button>"));
       c.innerHTML = parts.join("");
       $$("button", c).forEach((b) => b.addEventListener("click", () => go("files", b.dataset.folder || null)));
     } else if (state.view === "search") {
-      c.innerHTML = '<button>Kết quả cho “' + esc(state.query) + "”</button>";
+      c.innerHTML = '<button>Results for “' + esc(state.query) + "”</button>";
     } else {
       c.innerHTML = "<button>" + TITLES[state.view] + "</button>";
     }
@@ -138,21 +138,21 @@
 
   function emptyState() {
     const map = {
-      files: ["cloud", "Thư mục trống", "Kéo thả file vào đây hoặc bấm Tải lên để bắt đầu.", true],
-      recent: ["clock", "Chưa có hoạt động", "Các file bạn vừa tải lên sẽ hiện ở đây.", false],
-      starred: ["star", "Chưa có file gắn sao", "Gắn sao cho file quan trọng để tìm lại nhanh.", false],
-      search: ["search", "Không tìm thấy kết quả", "Thử từ khóa khác xem sao.", false],
-      shared: ["link", "Chưa chia sẻ file nào", "Mở menu của một file và chọn Chia sẻ để tạo link công khai.", false]
+      files: ["cloud", "This folder is empty", "Drag and drop files here or click Upload to get started.", true],
+      recent: ["clock", "No activity yet", "Files you upload will show up here.", false],
+      starred: ["star", "No starred files", "Star important files to find them quickly.", false],
+      search: ["search", "No results found", "Try a different keyword.", false],
+      shared: ["link", "No shared files yet", "Open a file's menu and choose Share link to create a public link.", false]
     };
     const [ic, t, d, btn] = map[state.view];
     return '<div class="empty"><div class="art">' + icon(ic) + "</div><h3>" + t + "</h3><p>" + d + "</p>" +
-      (btn ? '<button class="btn primary" data-act="upload">' + icon("upload") + "Tải lên file</button>" : "") + "</div>";
+      (btn ? '<button class="btn primary" data-act="upload">' + icon("upload") + "Upload files</button>" : "") + "</div>";
   }
 
   function folderCard(f) {
     return '<div class="folder-card" data-folder-id="' + f.id + '" title="' + esc(f.name) + '">' + folderIcon() +
       '<div class="name">' + esc(f.name) + "</div>" +
-      '<button class="icon-btn" data-menu-folder="' + f.id + '" aria-label="Tùy chọn">' + icon("more") + "</button></div>";
+      '<button class="icon-btn" data-menu-folder="' + f.id + '" aria-label="Options">' + icon("more") + "</button></div>";
   }
 
   function fileCard(f) {
@@ -164,37 +164,37 @@
       (f.starred ? '<span class="star-badge">' + icon("star") + "</span>" : "") + "</div>" +
       '<div class="meta"><div class="txt"><div class="name">' + esc(f.name) + '</div><div class="sub">' +
       bytes(f.size) + " · " + date(f.uploadedAt) + "</div></div>" +
-      '<button class="icon-btn" data-menu-file="' + f.id + '" aria-label="Tùy chọn">' + icon("more") + "</button></div></div>";
+      '<button class="icon-btn" data-menu-file="' + f.id + '" aria-label="Options">' + icon("more") + "</button></div></div>";
   }
 
   function listView() {
     const rows = state.folders.map((f) =>
       '<tr data-folder-id="' + f.id + '"><td><div class="cell-name">' + folderIcon() + "<span>" + esc(f.name) + "</span></div></td>" +
-      '<td class="num">—</td><td class="num hide-sm">' + date(f.createdAt) + '</td><td class="num hide-sm">Thư mục</td>' +
+      '<td class="num">—</td><td class="num hide-sm">' + date(f.createdAt) + '</td><td class="num hide-sm">Folder</td>' +
       '<td class="act"><button class="icon-btn" data-menu-folder="' + f.id + '">' + icon("more") + "</button></td></tr>"
     ).concat(state.files.map((f) =>
       '<tr data-file-id="' + f.id + '" draggable="true"><td><div class="cell-name">' + fileIcon(f.category) + "<span>" + esc(f.name) + "</span>" +
       (f.starred ? '<span style="color:var(--accent)">' + icon("star") + "</span>" : "") + "</div></td>" +
       '<td class="num">' + bytes(f.size) + '</td><td class="num hide-sm" title="' + fullDate(f.uploadedAt) + '">' + date(f.uploadedAt) +
-      '</td><td class="num hide-sm">' + (N.CAT_LABEL[f.category] || "Khác") + "</td>" +
+      '</td><td class="num hide-sm">' + (N.CAT_LABEL[f.category] || "Other") + "</td>" +
       '<td class="act"><button class="icon-btn" data-menu-file="' + f.id + '">' + icon("more") + "</button></td></tr>"
     ));
-    return '<div class="table-wrap"><table class="table"><thead><tr><th>Tên</th><th>Kích thước</th><th class="hide-sm">Ngày tải lên</th>' +
-      '<th class="hide-sm">Loại</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div>";
+    return '<div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Size</th><th class="hide-sm">Uploaded</th>' +
+      '<th class="hide-sm">Type</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div>";
   }
 
   function sharedView() {
     if (!state.shares.length) return emptyState();
     const rows = state.shares.map((s) => {
-      const status = s.expired ? '<span class="tag bad">Hết hạn</span>'
-        : '<span class="tag ok">' + (s.expiresAt ? "Đến " + fullDate(s.expiresAt) : "Không hết hạn") + "</span>";
+      const status = s.expired ? '<span class="tag bad">Expired</span>'
+        : '<span class="tag ok">' + (s.expiresAt ? "Until " + fullDate(s.expiresAt) : "Never expires") + "</span>";
       return "<tr><td><div class=\"cell-name\">" + fileIcon("other") + "<span>" + esc(s.fileName) + "</span></div></td>" +
-        "<td>" + status + '</td><td class="num">' + s.downloads + ' lượt</td><td class="num hide-sm">' + date(s.createdAt) + "</td>" +
-        '<td class="act" style="width:96px;white-space:nowrap"><button class="icon-btn" title="Sao chép link" data-copy="' + esc(s.token) + '">' + icon("copy") +
-        '</button><button class="icon-btn" title="Thu hồi" data-revoke="' + s.id + '">' + icon("trash") + "</button></td></tr>";
+        "<td>" + status + '</td><td class="num">' + s.downloads + ' downloads</td><td class="num hide-sm">' + date(s.createdAt) + "</td>" +
+        '<td class="act" style="width:96px;white-space:nowrap"><button class="icon-btn" title="Copy link" data-copy="' + esc(s.token) + '">' + icon("copy") +
+        '</button><button class="icon-btn" title="Revoke" data-revoke="' + s.id + '">' + icon("trash") + "</button></td></tr>";
     }).join("");
-    return '<div class="table-wrap"><table class="table"><thead><tr><th>File</th><th>Trạng thái</th><th>Lượt tải</th>' +
-      '<th class="hide-sm">Tạo lúc</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    return '<div class="table-wrap"><table class="table"><thead><tr><th>File</th><th>Status</th><th>Downloads</th>' +
+      '<th class="hide-sm">Created</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
   }
 
   function render() {
@@ -212,8 +212,8 @@
       v.innerHTML = listView();
     } else {
       v.innerHTML =
-        (state.folders.length ? '<div class="section-title">Thư mục</div><div class="grid">' + state.folders.map(folderCard).join("") + "</div>" : "") +
-        (state.files.length ? '<div class="section-title">File</div><div class="grid">' + state.files.map(fileCard).join("") + "</div>" : "");
+        (state.folders.length ? '<div class="section-title">Folders</div><div class="grid">' + state.folders.map(folderCard).join("") + "</div>" : "") +
+        (state.files.length ? '<div class="section-title">Files</div><div class="grid">' + state.files.map(fileCard).join("") + "</div>" : "");
       loadThumbs();
     }
     bindView(v);
@@ -274,12 +274,12 @@
     }));
     $$("[data-copy]", v).forEach((b) => b.addEventListener("click", async () => {
       await N.copyText(shareUrl(b.dataset.copy));
-      toast("Đã sao chép link");
+      toast("Link copied");
     }));
     $$("[data-revoke]", v).forEach((b) => b.addEventListener("click", async () => {
-      if (!(await confirmDialog("Thu hồi link?", "Người có link sẽ không tải được file nữa.", "Thu hồi"))) return;
+      if (!(await confirmDialog("Revoke link?", "People with the link will no longer be able to download the file.", "Revoke"))) return;
       await api("/api/shares/" + b.dataset.revoke, { method: "DELETE" });
-      toast("Đã thu hồi link");
+      toast("Link revoked");
       load();
     }));
   }
@@ -304,28 +304,28 @@
   function fileMenu(f, x, y) {
     if (!f) return;
     const items = [
-      { icon: "eye", label: "Xem trước", run: () => preview(f) },
-      { icon: "download", label: "Tải xuống", run: () => download(f) },
-      { icon: "share", label: "Chia sẻ link", run: () => shareDialog(f) },
+      { icon: "eye", label: "Preview", run: () => preview(f) },
+      { icon: "download", label: "Download", run: () => download(f) },
+      { icon: "share", label: "Share link", run: () => shareDialog(f) },
       "-",
-      { icon: "star", label: f.starred ? "Bỏ gắn sao" : "Gắn sao", run: () => toggleStar(f) },
-      { icon: "edit", label: "Đổi tên", run: () => renameFile(f) },
-      { icon: "move", label: "Di chuyển", run: () => moveDialog(f) }
+      { icon: "star", label: f.starred ? "Unstar" : "Star", run: () => toggleStar(f) },
+      { icon: "edit", label: "Rename", run: () => renameFile(f) },
+      { icon: "move", label: "Move", run: () => moveDialog(f) }
     ];
     if (state.profile && state.profile.storageBackend === "s3") {
-      items.push({ icon: "link", label: "Link S3 tạm thời (15 phút)", run: () => presign(f) });
+      items.push({ icon: "link", label: "Temporary S3 link (15 min)", run: () => presign(f) });
     }
-    items.push("-", { icon: "trash", label: "Xóa", danger: true, run: () => deleteFile(f) });
+    items.push("-", { icon: "trash", label: "Delete", danger: true, run: () => deleteFile(f) });
     popup(items, x, y);
   }
 
   function folderMenu(f, x, y) {
     if (!f) return;
     popup([
-      { icon: "folder", label: "Mở", run: () => go("files", f.id) },
-      { icon: "edit", label: "Đổi tên", run: () => renameFolder(f) },
+      { icon: "folder", label: "Open", run: () => go("files", f.id) },
+      { icon: "edit", label: "Rename", run: () => renameFolder(f) },
       "-",
-      { icon: "trash", label: "Xóa thư mục", danger: true, run: () => deleteFolder(f) }
+      { icon: "trash", label: "Delete folder", danger: true, run: () => deleteFolder(f) }
     ], x, y);
   }
 
@@ -334,12 +334,12 @@
     const r = e.currentTarget.getBoundingClientRect();
     const p = state.profile;
     const head = '<div class="head"><b>' + esc(session.user) + '</b><div class="small muted">' +
-      (p ? p.fileCount + " file · " + p.folderCount + " thư mục" : "") + "</div></div>";
+      (p ? p.fileCount + (p.fileCount === 1 ? " file · " : " files · ") + p.folderCount + (p.folderCount === 1 ? " folder" : " folders") : "") + "</div></div>";
     popup([
-      { icon: "book", label: "Tài liệu API (Swagger)", run: () => window.open("/swagger-ui.html", "_blank") },
-      { icon: "activity", label: "Trạng thái hệ thống", run: () => window.open("/actuator/health", "_blank") },
+      { icon: "book", label: "API docs (Swagger)", run: () => window.open("/swagger-ui.html", "_blank") },
+      { icon: "activity", label: "System status", run: () => window.open("/actuator/health", "_blank") },
       "-",
-      { icon: "logout", label: "Đăng xuất", danger: true, run: () => { session.clear(); location.href = "/index.html"; } }
+      { icon: "logout", label: "Sign out", danger: true, run: () => { session.clear(); location.href = "/index.html"; } }
     ], r.right, r.bottom, head);
   });
 
@@ -376,7 +376,7 @@
       const m = modal({
         title,
         body: '<form><div class="field" style="margin:0"><label>' + esc(label) + '</label><input class="input" name="v" maxlength="255" required></div></form>',
-        foot: '<button class="btn" data-cancel>Hủy</button><button class="btn primary" data-ok>' + esc(okText || "Lưu") + "</button>",
+        foot: '<button class="btn" data-cancel>Cancel</button><button class="btn primary" data-ok>' + esc(okText || "Save") + "</button>",
         onClose: () => { if (!done) resolve(null); }
       });
       const input = $("input", m);
@@ -405,7 +405,7 @@
       const m = modal({
         title,
         body: '<p class="muted" style="margin:0;line-height:1.6">' + esc(message) + "</p>",
-        foot: '<button class="btn" data-cancel>Hủy</button><button class="btn danger" data-ok>' + esc(okText || "Xóa") + "</button>",
+        foot: '<button class="btn" data-cancel>Cancel</button><button class="btn danger" data-ok>' + esc(okText || "Delete") + "</button>",
         onClose: () => { if (!done) resolve(false); }
       });
       $("[data-ok]", m).addEventListener("click", () => { done = true; m.close(); resolve(true); });
@@ -421,7 +421,7 @@
 
   async function download(f) {
     try {
-      toast("Đang tải " + f.name + "...");
+      toast("Downloading " + f.name + "...");
       const url = URL.createObjectURL(await fetchBlob(f, false));
       const a = document.createElement("a");
       a.href = url;
@@ -437,7 +437,7 @@
     try {
       const r = await api("/api/files/" + f.id + "/presign");
       await N.copyText(r.url);
-      toast("Đã sao chép presigned URL (hết hạn lúc " + new Date(r.expiresAt).toLocaleTimeString("vi-VN") + ")");
+      toast("Presigned URL copied (expires at " + new Date(r.expiresAt).toLocaleTimeString("en-US") + ")");
     } catch (e) { toast(e.message, "error"); }
   }
 
@@ -452,10 +452,10 @@
       wide: true,
       icon: fileIcon(f.category),
       bodyClass: "preview-body",
-      body: '<div class="muted" style="padding:40px">Đang tải bản xem trước...</div>',
+      body: '<div class="muted" style="padding:40px">Loading preview...</div>',
       foot: '<span class="muted small" style="margin-right:auto">' + bytes(f.size) + " · " + fullDate(f.uploadedAt) + "</span>" +
-        '<button class="btn" data-share>' + icon("share") + "Chia sẻ</button>" +
-        '<button class="btn primary" data-dl>' + icon("download") + "Tải xuống</button>",
+        '<button class="btn" data-share>' + icon("share") + "Share</button>" +
+        '<button class="btn primary" data-dl>' + icon("download") + "Download</button>",
       onClose: () => { if (m && m.url) URL.revokeObjectURL(m.url); }
     });
     $("[data-dl]", m).addEventListener("click", () => download(f));
@@ -464,19 +464,19 @@
     const canInline = /^image\/(png|jpe?g|gif|webp|bmp)/.test(type) || type === "application/pdf" || /^(video|audio)\//.test(type);
     const isText = TEXT_EXT.includes(e) || type.startsWith("text/");
     if (!canInline && !isText) {
-      body.innerHTML = '<div class="empty">' + '<div class="art">' + icon(f.category) + "</div><h3>Không có bản xem trước</h3>" +
-        "<p>Định dạng ." + esc(e || "?") + " chưa hỗ trợ xem trực tuyến.</p></div>";
+      body.innerHTML = '<div class="empty">' + '<div class="art">' + icon(f.category) + "</div><h3>No preview available</h3>" +
+        "<p>The ." + esc(e || "?") + " format cannot be previewed online yet.</p></div>";
       return;
     }
     if (f.size > 50 * 1024 * 1024) {
-      body.innerHTML = '<div class="empty"><h3>File quá lớn để xem trước</h3><p>Hãy tải xuống để mở.</p></div>';
+      body.innerHTML = '<div class="empty"><h3>File is too large to preview</h3><p>Download it to open.</p></div>';
       return;
     }
     try {
       if (isText && !canInline) {
         const blob = await fetchBlob(f, false);
         const text = await blob.slice(0, 512 * 1024).text();
-        body.innerHTML = "<pre>" + esc(text) + (blob.size > 512 * 1024 ? "\n\n… (đã cắt bớt)" : "") + "</pre>";
+        body.innerHTML = "<pre>" + esc(text) + (blob.size > 512 * 1024 ? "\n\n… (truncated)" : "") + "</pre>";
         return;
       }
       const blob = await fetchBlob(f, true);
@@ -487,7 +487,7 @@
       else if (type.startsWith("video/")) body.innerHTML = '<video src="' + url + '" controls autoplay></video>';
       else body.innerHTML = '<audio src="' + url + '" controls autoplay></audio>';
     } catch (err) {
-      body.innerHTML = '<div class="empty"><h3>Không tải được bản xem trước</h3><p>' + esc(err.message) + "</p></div>";
+      body.innerHTML = '<div class="empty"><h3>Could not load preview</h3><p>' + esc(err.message) + "</p></div>";
     }
   }
 
@@ -497,32 +497,32 @@
 
   async function shareDialog(f) {
     const m = modal({
-      title: "Chia sẻ “" + f.name + "”",
+      title: "Share “" + f.name + "”",
       icon: fileIcon(f.category),
       body:
-        '<div class="field"><label>Thời hạn link</label><select class="input" name="exp">' +
-        '<option value="1">1 giờ</option><option value="24" selected>1 ngày</option><option value="168">7 ngày</option>' +
-        '<option value="720">30 ngày</option><option value="">Không hết hạn</option></select></div>' +
-        '<button class="btn primary block" data-create>' + icon("link") + "Tạo link chia sẻ</button>" +
+        '<div class="field"><label>Link expiry</label><select class="input" name="exp">' +
+        '<option value="1">1 hour</option><option value="24" selected>1 day</option><option value="168">7 days</option>' +
+        '<option value="720">30 days</option><option value="">Never expires</option></select></div>' +
+        '<button class="btn primary block" data-create>' + icon("link") + "Create share link</button>" +
         '<div class="link-list" data-list></div>'
     });
     const list = $("[data-list]", m);
     async function refresh() {
       const all = (await api("/api/shares")).filter((s) => s.fileId === f.id);
-      list.innerHTML = all.length ? '<div class="section-title" style="margin:6px 0 0">Link hiện có</div>' + all.map((s) =>
+      list.innerHTML = all.length ? '<div class="section-title" style="margin:6px 0 0">Existing links</div>' + all.map((s) =>
         '<div class="link-item"><div class="txt"><div class="share-link"><input class="input" readonly value="' + esc(shareUrl(s.token)) + '" style="height:34px"></div>' +
-        '<div style="margin-top:6px">' + (s.expired ? '<span class="tag bad">Hết hạn</span>' : '<span class="tag ok">' +
-          (s.expiresAt ? "Hết hạn " + fullDate(s.expiresAt) : "Không hết hạn") + "</span>") +
-        ' <span class="tag">' + s.downloads + " lượt tải</span></div></div>" +
-        '<button class="icon-btn" title="Sao chép" data-copy="' + esc(s.token) + '">' + icon("copy") + "</button>" +
-        '<button class="icon-btn" title="Thu hồi" data-revoke="' + s.id + '">' + icon("trash") + "</button></div>").join("") : "";
+        '<div style="margin-top:6px">' + (s.expired ? '<span class="tag bad">Expired</span>' : '<span class="tag ok">' +
+          (s.expiresAt ? "Expires " + fullDate(s.expiresAt) : "Never expires") + "</span>") +
+        ' <span class="tag">' + s.downloads + " downloads</span></div></div>" +
+        '<button class="icon-btn" title="Copy" data-copy="' + esc(s.token) + '">' + icon("copy") + "</button>" +
+        '<button class="icon-btn" title="Revoke" data-revoke="' + s.id + '">' + icon("trash") + "</button></div>").join("") : "";
       $$("[data-copy]", list).forEach((b) => b.addEventListener("click", async () => {
         await N.copyText(shareUrl(b.dataset.copy));
-        toast("Đã sao chép link");
+        toast("Link copied");
       }));
       $$("[data-revoke]", list).forEach((b) => b.addEventListener("click", async () => {
         await api("/api/shares/" + b.dataset.revoke, { method: "DELETE" });
-        toast("Đã thu hồi link");
+        toast("Link revoked");
         refresh();
       }));
     }
@@ -531,7 +531,7 @@
       try {
         const s = await api("/api/files/" + f.id + "/shares", { method: "POST", body: { expiresInHours: v ? +v : null } });
         await N.copyText(shareUrl(s.token));
-        toast("Đã tạo và sao chép link chia sẻ");
+        toast("Share link created and copied");
         refresh();
       } catch (e) { toast(e.message, "error"); }
     });
@@ -541,17 +541,17 @@
   async function toggleStar(f) {
     try {
       await api("/api/files/" + f.id + "/star", { method: "PUT", body: { starred: !f.starred } });
-      toast(f.starred ? "Đã bỏ gắn sao" : "Đã gắn sao");
+      toast(f.starred ? "Unstarred" : "Starred");
       load();
     } catch (e) { toast(e.message, "error"); }
   }
 
   async function renameFile(f) {
-    const name = await promptDialog("Đổi tên file", "Tên mới", f.name);
+    const name = await promptDialog("Rename file", "New name", f.name);
     if (!name || name === f.name) return;
     try {
       await api("/api/files/" + f.id, { method: "PATCH", body: { name } });
-      toast("Đã đổi tên");
+      toast("Renamed");
       load();
     } catch (e) { toast(e.message, "error"); }
   }
@@ -559,7 +559,7 @@
   async function moveFile(id, folderId) {
     try {
       await api("/api/files/" + id + "/move", { method: "POST", body: { folderId: folderId || null } });
-      toast("Đã di chuyển file");
+      toast("File moved");
       load();
     } catch (e) { toast(e.message, "error"); }
   }
@@ -579,9 +579,9 @@
     })("root", 0);
     let target;
     const m = modal({
-      title: "Di chuyển “" + f.name + "”",
-      body: '<div class="tree"><button data-target=""' + (!f.folderId ? " disabled" : "") + ">" + icon("home") + "Tệp của tôi (gốc)</button>" + rows.join("") + "</div>",
-      foot: '<button class="btn" data-cancel>Hủy</button><button class="btn primary" data-ok disabled>Di chuyển tới đây</button>'
+      title: "Move “" + f.name + "”",
+      body: '<div class="tree"><button data-target=""' + (!f.folderId ? " disabled" : "") + ">" + icon("home") + "My files (root)</button>" + rows.join("") + "</div>",
+      foot: '<button class="btn" data-cancel>Cancel</button><button class="btn primary" data-ok disabled>Move here</button>'
     });
     $$(".tree .ficon", m).forEach((el) => { el.style.width = "26px"; el.style.height = "26px"; el.style.borderRadius = "7px"; });
     $$("[data-target]", m).forEach((b) => b.addEventListener("click", () => {
@@ -595,28 +595,28 @@
   }
 
   async function deleteFile(f) {
-    if (!(await confirmDialog("Xóa file?", "“" + f.name + "” sẽ bị xóa vĩnh viễn khỏi kho lưu trữ, các link chia sẻ cũng bị hủy."))) return;
+    if (!(await confirmDialog("Delete file?", "“" + f.name + "” will be permanently deleted from storage, and its share links will be revoked."))) return;
     try {
       await api("/api/files/" + f.id, { method: "DELETE" });
-      toast("Đã xóa " + f.name);
+      toast("Deleted " + f.name);
       load();
       loadProfile();
     } catch (e) { toast(e.message, "error"); }
   }
 
   async function newFolder() {
-    const name = await promptDialog("Thư mục mới", "Tên thư mục", "Thư mục mới", "Tạo");
+    const name = await promptDialog("New folder", "Folder name", "New folder", "Create");
     if (!name) return;
     try {
       await api("/api/folders", { method: "POST", body: { name, parentId: state.folderId } });
-      toast("Đã tạo thư mục");
+      toast("Folder created");
       load();
       loadProfile();
     } catch (e) { toast(e.message, "error"); }
   }
 
   async function renameFolder(f) {
-    const name = await promptDialog("Đổi tên thư mục", "Tên mới", f.name);
+    const name = await promptDialog("Rename folder", "New name", f.name);
     if (!name || name === f.name) return;
     try {
       await api("/api/folders/" + f.id, { method: "PATCH", body: { name } });
@@ -625,10 +625,10 @@
   }
 
   async function deleteFolder(f) {
-    if (!(await confirmDialog("Xóa thư mục?", "“" + f.name + "” cùng toàn bộ thư mục con và file bên trong sẽ bị xóa vĩnh viễn."))) return;
+    if (!(await confirmDialog("Delete folder?", "“" + f.name + "” and all subfolders and files inside it will be permanently deleted."))) return;
     try {
       await api("/api/folders/" + f.id, { method: "DELETE" });
-      toast("Đã xóa thư mục");
+      toast("Folder deleted");
       load();
       loadProfile();
     } catch (e) { toast(e.message, "error"); }
@@ -649,7 +649,7 @@
     const jobs = files.map((file) => {
       const row = document.createElement("div");
       row.className = "up-item";
-      row.innerHTML = fileIcon("other") + '<div class="txt"><div class="name">' + esc(file.name) + '</div><div class="prog"><span></span></div><div class="st">Đang chờ · ' + bytes(file.size) + "</div></div>";
+      row.innerHTML = fileIcon("other") + '<div class="txt"><div class="name">' + esc(file.name) + '</div><div class="prog"><span></span></div><div class="st">Waiting · ' + bytes(file.size) + "</div></div>";
       list.prepend(row);
       return { file, row };
     });
@@ -666,7 +666,7 @@
           });
           bar.style.width = "100%";
           row.classList.add("done");
-          st.textContent = "Hoàn tất · " + bytes(file.size);
+          st.textContent = "Done · " + bytes(file.size);
         } catch (e) {
           row.classList.add("err");
           st.textContent = e.message;
@@ -679,7 +679,7 @@
     })();
   }
   function updateUploadTitle() {
-    $("#uploads-title").textContent = pending > 0 ? "Đang tải lên " + pending + " file..." : "Tải lên hoàn tất";
+    $("#uploads-title").textContent = pending > 0 ? "Uploading " + pending + (pending === 1 ? " file..." : " files...") : "Upload complete";
   }
   $("#uploads-close").addEventListener("click", () => {
     $("#uploads").classList.add("hidden");
@@ -693,7 +693,7 @@
     if (!isExternal(e)) return;
     e.preventDefault();
     dragDepth++;
-    $("#drop-target").textContent = "vào " + (state.view === "files" && state.path.length ? "“" + state.path[state.path.length - 1].name + "”" : "Tệp của tôi");
+    $("#drop-target").textContent = "to " + (state.view === "files" && state.path.length ? "“" + state.path[state.path.length - 1].name + "”" : "My files");
     $("#drop").classList.remove("hidden");
   });
   window.addEventListener("dragover", (e) => { if (isExternal(e)) e.preventDefault(); });

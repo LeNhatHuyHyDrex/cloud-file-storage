@@ -67,9 +67,9 @@ public class FileController {
         return FileDto.of(files.upload(file, auth.getName(), folderId));
     }
 
-    @Operation(summary = "Liệt kê file",
-            description = "Mặc định: file trong thư mục `folderId` (bỏ trống = gốc). "
-                    + "`q` = tìm theo tên trên toàn bộ, `view=starred|recent|all`.")
+    @Operation(summary = "List files",
+            description = "Default: files in folder `folderId` (empty = root). "
+                    + "`q` = search by name across all files, `view=starred|recent|all`.")
     @GetMapping
     public List<FileDto> list(@RequestParam(required = false) UUID folderId,
                               @RequestParam(required = false) String q,
@@ -97,8 +97,8 @@ public class FileController {
         return FileDto.of(files.findOwned(id, auth.getName()));
     }
 
-    @Operation(summary = "Tải file (stream qua server)",
-            description = "`inline=true` để xem trước trong trình duyệt; chỉ áp dụng cho ảnh/PDF/text/video/audio.")
+    @Operation(summary = "Download a file (streamed through the server)",
+            description = "`inline=true` to preview in the browser; only applies to images/PDF/text/video/audio.")
     @GetMapping("/{id}/download")
     public ResponseEntity<InputStreamResource> download(@PathVariable UUID id,
                                                         @RequestParam(defaultValue = "false") boolean inline,
@@ -124,29 +124,29 @@ public class FileController {
                 .body(new InputStreamResource(files.open(meta)));
     }
 
-    @Operation(summary = "Tạo presigned URL tải trực tiếp từ S3 (hết hạn sau 15 phút)")
+    @Operation(summary = "Create a presigned URL to download directly from S3 (expires after 15 minutes)")
     @GetMapping("/{id}/presign")
     public PresignDto presign(@PathVariable UUID id, Authentication auth) {
         FileMeta meta = files.findOwned(id, auth.getName());
         return files.presign(meta)
                 .map(url -> new PresignDto(url.toString(), Instant.now().plus(files.presignTtl())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
-                        "Backend lưu trữ hiện tại không hỗ trợ presigned URL"));
+                        "The current storage backend does not support presigned URLs"));
     }
 
-    @Operation(summary = "Đổi tên file")
+    @Operation(summary = "Rename a file")
     @PatchMapping("/{id}")
     public FileDto rename(@PathVariable UUID id, @Valid @RequestBody NameRequest body, Authentication auth) {
         return FileDto.of(files.rename(auth.getName(), id, body.name()));
     }
 
-    @Operation(summary = "Di chuyển file sang thư mục khác (folderId=null: về gốc)")
+    @Operation(summary = "Move a file to another folder (folderId=null: to root)")
     @PostMapping("/{id}/move")
     public FileDto move(@PathVariable UUID id, @RequestBody MoveRequest body, Authentication auth) {
         return FileDto.of(files.move(auth.getName(), id, body.folderId()));
     }
 
-    @Operation(summary = "Đánh dấu / bỏ đánh dấu sao")
+    @Operation(summary = "Star / unstar")
     @PutMapping("/{id}/star")
     public FileDto star(@PathVariable UUID id, @RequestBody StarRequest body, Authentication auth) {
         return FileDto.of(files.star(auth.getName(), id, body.starred()));
@@ -158,7 +158,7 @@ public class FileController {
         files.delete(auth.getName(), id);
     }
 
-    @Operation(summary = "Tạo link chia sẻ công khai")
+    @Operation(summary = "Create a public share link")
     @PostMapping("/{id}/shares")
     @ResponseStatus(HttpStatus.CREATED)
     public ShareDto share(@PathVariable UUID id, @Valid @RequestBody(required = false) CreateShareRequest body,

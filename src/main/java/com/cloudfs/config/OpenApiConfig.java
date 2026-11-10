@@ -17,8 +17,8 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Nimbus Drive API")
                         .version("1.0")
-                        .description("REST API lưu trữ file trên object storage tương thích S3. "
-                                + "Đăng nhập tại /api/auth/login rồi bấm Authorize và dán token."))
+                        .description("REST API for storing files on S3-compatible object storage. "
+                                + "Log in at /api/auth/login, then click Authorize and paste the token."))
                 .components(new Components().addSecuritySchemes("bearer",
                         new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")));
     }

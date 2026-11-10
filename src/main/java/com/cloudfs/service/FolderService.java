@@ -37,7 +37,7 @@ public class FolderService {
     public Folder findOwned(UUID id, String owner) {
         return folders.findById(id)
                 .filter(f -> f.getOwner().equals(owner))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy thư mục"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Folder not found"));
     }
 
     public List<Folder> list(String owner, UUID parentId) {

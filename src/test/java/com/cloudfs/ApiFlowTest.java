@@ -141,7 +141,7 @@ class ApiFlowTest {
                         .file(new MockMultipartFile("file", "b.txt", "text/plain", "y".repeat(200).getBytes()))
                         .header("Authorization", token))
                 .andExpect(status().isPayloadTooLarge())
-                .andExpect(jsonPath("$.detail", is("Vượt quá dung lượng cho phép")));
+                .andExpect(jsonPath("$.detail", is("Storage quota exceeded")));
         mvc.perform(get("/api/me").header("Authorization", token))
                 .andExpect(jsonPath("$.usedBytes", is(900)))
                 .andExpect(jsonPath("$.quotaBytes", is(1000)))

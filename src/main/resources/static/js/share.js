@@ -11,28 +11,28 @@
 
   function fail(title, msg) {
     card.innerHTML = brand + '<div class="ficon" style="background:var(--danger-soft);color:var(--danger)">' + icon("alert") + "</div>" +
-      "<h2>" + esc(title) + '</h2><p class="muted">' + esc(msg) + '</p><a class="btn" href="/">Về trang chủ</a>';
+      "<h2>" + esc(title) + '</h2><p class="muted">' + esc(msg) + '</p><a class="btn" href="/">Back to home</a>';
   }
 
   (async function () {
-    if (!token) return fail("Link không hợp lệ", "Thiếu mã chia sẻ trong đường dẫn.");
+    if (!token) return fail("Invalid link", "The share code is missing from the URL.");
     let info;
     try {
       const res = await fetch(base);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        return fail(res.status === 410 ? "Link đã hết hạn" : "Không tìm thấy file", body.detail || "Link có thể đã bị thu hồi.");
+        return fail(res.status === 410 ? "Link has expired" : "File not found", body.detail || "The link may have been revoked.");
       }
       info = await res.json();
     } catch (e) {
-      return fail("Lỗi kết nối", "Không thể kết nối tới máy chủ.");
+      return fail("Connection error", "Could not connect to the server.");
     }
     document.title = info.fileName + " — Nimbus Drive";
     card.innerHTML = brand + fileIcon(info.category) + "<h2>" + esc(info.fileName) + "</h2>" +
-      '<div class="muted">' + bytes(info.size) + " · chia sẻ bởi <b>" + esc(info.owner) + "</b></div>" +
-      '<div class="small muted" style="margin-top:6px">' + (info.expiresAt ? "Link hết hạn lúc " + fullDate(info.expiresAt) : "Link không có thời hạn") + "</div>" +
+      '<div class="muted">' + bytes(info.size) + " · shared by <b>" + esc(info.owner) + "</b></div>" +
+      '<div class="small muted" style="margin-top:6px">' + (info.expiresAt ? "Link expires at " + fullDate(info.expiresAt) : "Link never expires") + "</div>" +
       '<div class="pv hidden" id="pv"></div>' +
-      '<a class="btn primary block" style="margin-top:22px" href="' + base + '/download">' + icon("download") + "Tải xuống</a>";
+      '<a class="btn primary block" style="margin-top:22px" href="' + base + '/download">' + icon("download") + "Download</a>";
 
     const type = info.contentType || "";
     if (/^image\/(png|jpe?g|gif|webp|bmp)/.test(type) && info.size < 15 * 1024 * 1024) {

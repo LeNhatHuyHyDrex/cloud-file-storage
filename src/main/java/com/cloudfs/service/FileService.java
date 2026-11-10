@@ -69,25 +69,25 @@ public class FileService {
     public FileMeta findOwned(UUID id, String owner) {
         return files.findById(id)
                 .filter(f -> f.getOwner().equals(owner))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy file"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
     }
 
     private void requireFolder(UUID folderId, String owner) {
         if (folderId != null && folders.findById(folderId).filter(f -> f.getOwner().equals(owner)).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy thư mục");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Folder not found");
         }
     }
 
     public FileMeta upload(MultipartFile file, String owner, UUID folderId) throws IOException {
         if (file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File rỗng");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is empty");
         }
         requireFolder(folderId, owner);
         AppUser user = users.findByUsername(owner)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         long used = files.totalSizeByOwner(owner);
         if (used + file.getSize() > user.getQuotaBytes()) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Vượt quá dung lượng cho phép");
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Storage quota exceeded");
         }
 
         String name = FileNames.clean(file.getOriginalFilename() != null ? file.getOriginalFilename() : "unnamed");

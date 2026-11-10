@@ -54,23 +54,23 @@ public class ShareService {
     public void revoke(String owner, UUID id) {
         ShareLink link = shares.findById(id)
                 .filter(s -> s.getOwner().equals(owner))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy link"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
         shares.delete(link);
     }
 
     /** Tra ve link con hieu luc; 404 neu khong ton tai, 410 neu da het han. */
     public ShareLink resolve(String token) {
         ShareLink link = shares.findByToken(token)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link không tồn tại"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link does not exist"));
         if (link.isExpired()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Link đã hết hạn");
+            throw new ResponseStatusException(HttpStatus.GONE, "Link has expired");
         }
         return link;
     }
 
     public FileMeta fileOf(ShareLink link) {
         return files.findById(link.getFileId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File đã bị xóa"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File has been deleted"));
     }
 
     @Transactional
@@ -79,6 +79,6 @@ public class ShareService {
     }
 
     public String fileName(ShareLink link) {
-        return files.findById(link.getFileId()).map(FileMeta::getOriginalName).orElse("(đã xóa)");
+        return files.findById(link.getFileId()).map(FileMeta::getOriginalName).orElse("(deleted)");
     }
 }

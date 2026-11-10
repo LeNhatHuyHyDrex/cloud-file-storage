@@ -30,8 +30,8 @@
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "icon-btn theme-fab";
-    btn.title = "Đổi giao diện sáng/tối";
-    btn.setAttribute("aria-label", "Đổi giao diện sáng/tối");
+    btn.title = "Toggle light/dark theme";
+    btn.setAttribute("aria-label", "Toggle light/dark theme");
     const paint = () => { btn.innerHTML = icon(currentTheme() === "dark" ? "sun" : "moon"); };
     btn.addEventListener("click", () => { toggleTheme(); paint(); });
     paint();
@@ -57,13 +57,13 @@
   }
 
   async function errorFrom(res) {
-    let msg = res.statusText || "Lỗi " + res.status;
+    let msg = res.statusText || "Error " + res.status;
     try {
       const body = await res.json();
       msg = body.detail || body.message || body.title || msg;
     } catch (e) { /* not json */ }
-    if (res.status === 401) msg = "Phiên đăng nhập đã hết hạn";
-    if (res.status === 413 && !msg) msg = "File quá lớn";
+    if (res.status === 401) msg = "Your session has expired";
+    if (res.status === 413 && !msg) msg = "File is too large";
     return new ApiError(res.status, msg);
   }
 
@@ -79,7 +79,7 @@
     if (res.status === 401 && opts.auth !== false) {
       session.clear();
       window.location.href = "/index.html?expired=1";
-      throw new ApiError(401, "Phiên đăng nhập đã hết hạn");
+      throw new ApiError(401, "Your session has expired");
     }
     if (!res.ok) throw await errorFrom(res);
     if (opts.raw) return res;
@@ -102,9 +102,9 @@
         let body = null;
         try { body = JSON.parse(xhr.responseText); } catch (e) { /* ignore */ }
         if (xhr.status >= 200 && xhr.status < 300) resolve(body);
-        else reject(new ApiError(xhr.status, (body && (body.detail || body.title)) || "Upload thất bại (" + xhr.status + ")"));
+        else reject(new ApiError(xhr.status, (body && (body.detail || body.title)) || "Upload failed (" + xhr.status + ")"));
       };
-      xhr.onerror = () => reject(new ApiError(0, "Mất kết nối mạng"));
+      xhr.onerror = () => reject(new ApiError(0, "Network connection lost"));
       xhr.send(fd);
     });
   }
@@ -173,20 +173,21 @@
     if (!iso) return "";
     const d = new Date(iso);
     const diff = (Date.now() - d.getTime()) / 1000;
-    if (diff < 60) return "Vừa xong";
-    if (diff < 3600) return Math.floor(diff / 60) + " phút trước";
-    if (diff < 86400) return Math.floor(diff / 3600) + " giờ trước";
-    if (diff < 86400 * 7) return Math.floor(diff / 86400) + " ngày trước";
-    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const ago = (n, unit) => n + " " + unit + (n === 1 ? "" : "s") + " ago";
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return ago(Math.floor(diff / 60), "minute");
+    if (diff < 86400) return ago(Math.floor(diff / 3600), "hour");
+    if (diff < 86400 * 7) return ago(Math.floor(diff / 86400), "day");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
   function fullDate(iso) {
-    return iso ? new Date(iso).toLocaleString("vi-VN") : "";
+    return iso ? new Date(iso).toLocaleString("en-US") : "";
   }
   function ext(name) {
     const i = (name || "").lastIndexOf(".");
     return i > 0 ? name.slice(i + 1).toLowerCase() : "";
   }
-  const CAT_LABEL = { image: "Hình ảnh", video: "Video", audio: "Âm thanh", document: "Tài liệu", archive: "Nén", code: "Mã nguồn", other: "Khác" };
+  const CAT_LABEL = { image: "Images", video: "Video", audio: "Audio", document: "Documents", archive: "Archives", code: "Code", other: "Other" };
   function fileIcon(category, size) {
     const cat = category || "other";
     return '<div class="ficon" style="background:color-mix(in srgb,var(--c-' + cat + ') 14%,transparent);color:var(--c-' + cat + ')">' + icon(cat) + "</div>";

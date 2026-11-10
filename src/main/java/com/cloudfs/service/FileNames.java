@@ -14,7 +14,7 @@ final class FileNames {
         int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
         name = name.substring(slash + 1).replaceAll("\\p{Cntrl}", "").strip();
         if (name.isEmpty() || name.equals(".") || name.equals("..")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên không hợp lệ");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid name");
         }
         return name.length() > 255 ? name.substring(0, 255) : name;
     }
