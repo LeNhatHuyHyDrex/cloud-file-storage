@@ -156,7 +156,7 @@
   }
 
   function fileCard(f) {
-    const thumb = f.category === "image" && thumbs.get(f.id)
+    const thumb = thumbs.get(f.id)
       ? '<img src="' + thumbs.get(f.id) + '" alt="">'
       : fileIcon(f.category);
     return '<div class="file-card" draggable="true" data-file-id="' + f.id + '" title="' + esc(f.name) + '">' +
@@ -221,17 +221,46 @@
 
   async function loadThumbs() {
     for (const f of state.files) {
-      if (f.category !== "image" || thumbs.has(f.id) || f.size > 8 * 1024 * 1024) continue;
-      if (!/^image\/(png|jpe?g|gif|webp|bmp)/.test(f.contentType || "")) continue;
+      const type = f.contentType || "";
+      const isImage = f.category === "image" && /^image\/(png|jpe?g|gif|webp|bmp)(?:;|$)/i.test(type);
+      const isVideo = f.category === "video" && /^video\//i.test(type);
+      if ((!isImage && !isVideo) || thumbs.has(f.id) || f.size > 50 * 1024 * 1024) continue;
       thumbs.set(f.id, null);
       try {
         const res = await api("/api/files/" + f.id + "/download?inline=true", { raw: true });
-        const url = URL.createObjectURL(await res.blob());
+        const blob = await res.blob();
+        const url = isVideo ? await videoThumbnail(blob) : URL.createObjectURL(blob);
         thumbs.set(f.id, url);
         const el = $('.file-card[data-file-id="' + f.id + '"] .thumb .ficon');
         if (el) el.outerHTML = '<img src="' + url + '" alt="">';
       } catch (e) { thumbs.delete(f.id); }
     }
+  }
+
+  function videoThumbnail(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const video = document.createElement("video");
+      const cleanup = () => { video.removeAttribute("src"); video.load(); URL.revokeObjectURL(url); };
+      video.preload = "auto";
+      video.muted = true;
+      video.onloadeddata = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const scale = Math.min(1, 480 / video.videoWidth);
+          canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+          canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+          canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((image) => {
+            cleanup();
+            if (image) resolve(URL.createObjectURL(image));
+            else reject(new Error("Could not create video thumbnail"));
+          }, "image/jpeg", 0.8);
+        } catch (e) { cleanup(); reject(e); }
+      };
+      video.onerror = () => { cleanup(); reject(new Error("Could not load video thumbnail")); };
+      video.src = url;
+    });
   }
 
   const byId = (id) => state.files.find((f) => f.id === id);
@@ -310,7 +339,7 @@
       "-",
       { icon: "star", label: f.starred ? "Unstar" : "Star", run: () => toggleStar(f) },
       { icon: "edit", label: "Rename", run: () => renameFile(f) },
-      { icon: "move", label: "Move", run: () => moveDialog(f) }
+      { icon: "move", label: "Move to folder", run: () => moveDialog(f) }
     ];
     if (state.profile && state.profile.storageBackend === "s3") {
       items.push({ icon: "link", label: "Temporary S3 link (15 min)", run: () => presign(f) });
