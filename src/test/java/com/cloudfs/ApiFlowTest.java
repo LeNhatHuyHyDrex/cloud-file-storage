@@ -199,6 +199,92 @@ class ApiFlowTest {
     }
 
     @Test
+    void folderSharingRequiresAcceptanceAndRestrictsAccessToSubtree() throws Exception {
+        String owner = register(uniq("owner"));
+        String recipientName = uniq("recipient");
+        String recipient = register(recipientName);
+        String stranger = register(uniq("stranger"));
+        String root = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Shared\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String child = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Nested\",\"parentId\":\"" + root + "\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String inside = upload(owner, "inside.txt", "inside", child).get("id").asText();
+        String outside = upload(owner, "outside.txt", "private", null).get("id").asText();
+        JsonNode invitation = json.readTree(mvc.perform(post("/api/folders/" + root + "/invitations")
+                .header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"" + recipientName + "\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        String id = invitation.get("id").asText();
+        mvc.perform(post("/api/folders/" + root + "/invitations").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"" + recipientName + "\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/folders/" + root + "/invitations").header("Authorization", stranger))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/folder-invitations/" + id).header("Authorization", stranger))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/folder-invitations").header("Authorization", recipient))
+                .andExpect(jsonPath("$[0].status", is("PENDING")));
+        mvc.perform(get("/api/folder-invitations/" + id + "/contents").header("Authorization", recipient))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", stranger))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", recipient))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/folder-invitations/" + id + "/contents").header("Authorization", recipient))
+                .andExpect(jsonPath("$.folders[0].name", is("Nested")));
+        mvc.perform(get("/api/folder-invitations/" + id + "/files/" + inside).header("Authorization", recipient))
+                .andExpect(content().string("inside"));
+        mvc.perform(get("/api/folder-invitations/" + id + "/files/" + outside).header("Authorization", recipient))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/folder-invitations/" + id).header("Authorization", owner))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/folder-invitations/" + id + "/contents").header("Authorization", recipient))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void folderLinkOnlyExposesItsSubtreeAndCanBeRevoked() throws Exception {
+        String owner = register(uniq("linkowner"));
+        String root = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Public\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String inside = upload(owner, "inside.txt", "public", root).get("id").asText();
+        String outside = upload(owner, "outside.txt", "private", null).get("id").asText();
+        JsonNode link = json.readTree(mvc.perform(post("/api/folders/" + root + "/links")
+                .header("Authorization", owner).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        String url = "/api/public/folders/" + link.get("token").asText();
+        mvc.perform(get(url)).andExpect(jsonPath("$.files[0].name", is("inside.txt")));
+        mvc.perform(get(url + "/files/" + inside)).andExpect(content().string("public"));
+        mvc.perform(get(url + "/files/" + outside)).andExpect(status().isNotFound());
+        mvc.perform(get(url + "?folderId=" + UUID.randomUUID())).andExpect(status().isNotFound());
+        mvc.perform(delete("/api/folder-links/" + link.get("id").asText()).header("Authorization", owner))
+                .andExpect(status().isNoContent());
+        mvc.perform(get(url)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void recipientCanDeclineAndOwnerCanInviteAgain() throws Exception {
+        String owner = register(uniq("declineowner"));
+        String username = uniq("declineto");
+        String recipient = register(username);
+        String folder = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Private\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String inviteBody = "{\"username\":\"" + username + "\"}";
+        String invitation = json.readTree(mvc.perform(post("/api/folders/" + folder + "/invitations")
+                .header("Authorization", owner).contentType(MediaType.APPLICATION_JSON).content(inviteBody))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        mvc.perform(post("/api/folder-invitations/" + invitation + "/decline").header("Authorization", recipient))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/folder-invitations").header("Authorization", recipient)).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(post("/api/folders/" + folder + "/invitations").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content(inviteBody)).andExpect(status().isCreated());
+    }
+
+    @Test
     void htmlIsNeverServedInline() throws Exception {
         String token = register(uniq("x"));
         String id = json.readTree(mvc.perform(multipart("/api/files")

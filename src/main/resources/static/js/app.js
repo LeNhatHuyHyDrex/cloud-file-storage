@@ -19,6 +19,8 @@
     folders: [],
     files: [],
     shares: [],
+    invitations: [],
+    sharedFolder: null,
     query: "",
     layout: (() => { try { return localStorage.getItem(LAYOUT_KEY) || "grid"; } catch (e) { return "grid"; } })(),
     profile: null,
@@ -59,6 +61,14 @@
     } catch (e) { /* api() da xu ly 401 */ }
   }
 
+  async function loadInvitations() {
+    try {
+      state.invitations = await api("/api/folder-invitations");
+      const count = state.invitations.filter((i) => i.status === "PENDING").length;
+      $("#invitation-count").textContent = count ? String(count) : "";
+    } catch (e) { /* Keep the rest of the drive usable if notifications cannot load. */ }
+  }
+
   // ---------- Data loading ----------
   async function load() {
     state.loading = true;
@@ -81,6 +91,11 @@
         Object.assign(state, { folders: [], files: await api("/api/files?q=" + encodeURIComponent(state.query)) });
       } else if (state.view === "shared") {
         state.shares = await api("/api/shares");
+      } else if (state.view === "incoming") {
+        await loadInvitations();
+      } else if (state.view === "shared-folder") {
+        const s = state.sharedFolder;
+        s.contents = await api("/api/folder-invitations/" + s.id + "/contents" + (s.folderId ? "?folderId=" + s.folderId : ""));
       }
     } catch (e) {
       if (e.status === 404 && state.folderId) {
@@ -100,7 +115,7 @@
       state.query = "";
       $("#search").value = "";
     }
-    $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.view === (view === "search" ? "" : view)));
+    $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.view === (view === "shared-folder" ? "incoming" : view === "search" ? "" : view)));
     $("#sidebar").classList.remove("open");
     const hash = view === "files" ? (folderId ? "#/folder/" + folderId : "#/") : "#/" + view;
     if (location.hash !== hash && view !== "search") history.pushState(null, "", hash);
@@ -110,13 +125,13 @@
   function fromHash() {
     const h = location.hash.replace(/^#\/?/, "");
     if (h.startsWith("folder/")) return go("files", h.slice(7));
-    if (["recent", "starred", "shared"].includes(h)) return go(h);
+    if (["recent", "starred", "shared", "incoming"].includes(h)) return go(h);
     go("files");
   }
   window.addEventListener("popstate", fromHash);
 
   // ---------- Rendering ----------
-  const TITLES = { recent: "Recent", starred: "Starred", shared: "Shared links" };
+  const TITLES = { recent: "Recent", starred: "Starred", shared: "Shared links", incoming: "Shared with me", "shared-folder": "Shared folder" };
 
   function renderCrumbs() {
     const c = $("#crumbs");
@@ -132,7 +147,7 @@
     }
     const canCreate = state.view === "files";
     $("#btn-new-folder").classList.toggle("hidden", !canCreate);
-    $(".view-toggle").classList.toggle("hidden", state.view === "shared");
+    $(".view-toggle").classList.toggle("hidden", ["shared", "incoming", "shared-folder"].includes(state.view));
     $$(".view-toggle button").forEach((b) => b.classList.toggle("active", b.dataset.layout === state.layout));
   }
 
@@ -197,6 +212,24 @@
       '<th class="hide-sm">Created</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
   }
 
+  function invitationsView() {
+    if (!state.invitations.length) return '<div class="empty"><div class="art">' + icon("folder") + '</div><h3>No shared folders yet</h3><p>Folder invitations will appear here.</p></div>';
+    return '<div class="shared-items">' + state.invitations.map((i) =>
+      '<div class="shared-item">' + folderIcon() + '<div class="shared-item-info"><strong>' + esc(i.folderName) + '</strong><span class="muted small">Shared by ' + esc(i.owner) + (i.status === "PENDING" ? ' · Invitation pending' : ' · View and download') + '</span></div>' +
+      (i.status === "PENDING" ? '<button class="btn" data-decline="' + i.id + '">Decline</button><button class="btn primary" data-accept="' + i.id + '">Accept</button>' : '<button class="btn" data-open-share="' + i.id + '">Open</button>') + '</div>').join("") + '</div>';
+  }
+
+  function sharedFolderView() {
+    const s = state.sharedFolder, c = s && s.contents;
+    if (!c) return '<div class="muted">Loading folder...</div>';
+    return '<div class="shared-folder-head"><button class="btn" data-shared-back>' + icon("chevron") + 'Back</button><div><strong>' + esc(c.folderName) + '</strong><div class="muted small">Shared by ' + esc(c.owner) + ' · View and download</div></div></div>' +
+      '<div class="shared-items">' + c.folders.map((f) => '<button class="shared-item shared-entry" data-shared-folder="' + f.id + '">' + folderIcon() + '<span>' + esc(f.name) + '</span></button>').join("") +
+      c.files.map((f) => '<div class="shared-item">' + fileIcon(f.category) + '<div class="shared-item-info"><strong>' + esc(f.name) + '</strong><span class="muted small">' + bytes(f.size) + '</span></div>' +
+        (/^(image\/(png|jpeg|gif|webp|bmp)|video\/|audio\/|application\/pdf)/i.test(f.contentType || '') ? '<button class="btn" data-shared-preview="' + f.id + '">Preview</button>' : '') +
+        '<button class="btn" data-shared-download="' + f.id + '">Download</button></div>').join("") +
+      (!c.folders.length && !c.files.length ? '<p class="muted">This folder is empty.</p>' : '') + '</div>';
+  }
+
   function render() {
     renderCrumbs();
     const v = $("#view");
@@ -204,7 +237,11 @@
       v.innerHTML = '<div class="grid">' + '<div class="skeleton"></div>'.repeat(6) + "</div>";
       return;
     }
-    if (state.view === "shared") {
+    if (state.view === "incoming") {
+      v.innerHTML = invitationsView();
+    } else if (state.view === "shared-folder") {
+      v.innerHTML = sharedFolderView();
+    } else if (state.view === "shared") {
       v.innerHTML = sharedView();
     } else if (!state.folders.length && !state.files.length) {
       v.innerHTML = emptyState();
@@ -220,21 +257,30 @@
   }
 
   async function loadThumbs() {
+    const queue = [];
     for (const f of state.files) {
       const type = f.contentType || "";
       const isImage = f.category === "image" && /^image\/(png|jpe?g|gif|webp|bmp)(?:;|$)/i.test(type);
       const isVideo = f.category === "video" && /^video\//i.test(type);
       if ((!isImage && !isVideo) || thumbs.has(f.id) || f.size > 50 * 1024 * 1024) continue;
       thumbs.set(f.id, null);
-      try {
-        const res = await api("/api/files/" + f.id + "/download?inline=true", { raw: true });
-        const blob = await res.blob();
-        const url = isVideo ? await videoThumbnail(blob) : URL.createObjectURL(blob);
-        thumbs.set(f.id, url);
-        const el = $('.file-card[data-file-id="' + f.id + '"] .thumb .ficon');
-        if (el) el.outerHTML = '<img src="' + url + '" alt="">';
-      } catch (e) { thumbs.delete(f.id); }
+      queue.push({ file: f, isVideo });
     }
+    queue.sort((a, b) => a.file.size - b.file.size);
+    async function worker() {
+      while (queue.length) {
+        const { file: f, isVideo } = queue.shift();
+        try {
+          const res = await api("/api/files/" + f.id + "/download?inline=true", { raw: true });
+          const blob = await res.blob();
+          const url = isVideo ? await videoThumbnail(blob) : URL.createObjectURL(blob);
+          thumbs.set(f.id, url);
+          const el = $('.file-card[data-file-id="' + f.id + '"] .thumb .ficon');
+          if (el) el.outerHTML = '<img src="' + url + '" alt="">';
+        } catch (e) { thumbs.delete(f.id); }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(3, queue.length) }, () => worker()));
   }
 
   function videoThumbnail(blob) {
@@ -267,6 +313,56 @@
   const folderById = (id) => state.folders.find((f) => f.id === id);
 
   function bindView(v) {
+    $$('[data-accept], [data-decline]', v).forEach((b) => b.addEventListener("click", async () => {
+      const id = b.dataset.accept || b.dataset.decline;
+      try {
+        await api('/api/folder-invitations/' + id + (b.dataset.accept ? '/accept' : '/decline'), { method: 'POST' });
+        await loadInvitations(); render();
+        toast(b.dataset.accept ? 'Invitation accepted' : 'Invitation declined');
+      } catch (e) { toast(e.message, 'error'); }
+    }));
+    $$('[data-open-share]', v).forEach((b) => b.addEventListener('click', () => {
+      state.sharedFolder = { id: b.dataset.openShare, folderId: null, path: [] };
+      go('shared-folder');
+    }));
+    $$('[data-shared-folder]', v).forEach((b) => b.addEventListener('click', () => {
+      state.sharedFolder.path.push(state.sharedFolder.folderId);
+      state.sharedFolder.folderId = b.dataset.sharedFolder;
+      state.sharedFolder.contents = null;
+      load();
+    }));
+    const back = $('[data-shared-back]', v);
+    if (back) back.addEventListener('click', () => {
+      if (!state.sharedFolder.path.length) return go('incoming');
+      state.sharedFolder.folderId = state.sharedFolder.path.pop();
+      state.sharedFolder.contents = null; load();
+    });
+    $$('[data-shared-download]', v).forEach((b) => b.addEventListener('click', async () => {
+      const f = state.sharedFolder.contents.files.find((x) => x.id === b.dataset.sharedDownload);
+      try {
+        const res = await api('/api/folder-invitations/' + state.sharedFolder.id + '/files/' + f.id, { raw: true });
+        const url = URL.createObjectURL(await res.blob());
+        const a = document.createElement('a'); a.href = url; a.download = f.name; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (e) { toast(e.message, 'error'); }
+    }));
+    $$('[data-shared-preview]', v).forEach((b) => b.addEventListener('click', async () => {
+      const f = state.sharedFolder.contents.files.find((x) => x.id === b.dataset.sharedPreview);
+      if (f.size > 50 * 1024 * 1024) return toast('File is too large to preview; download it instead.', 'error');
+      const m = modal({ title: f.name, wide: true, bodyClass: 'preview-body', body: '<div class="muted" style="padding:40px">Loading preview...</div>',
+        onClose: () => { if (m.url) URL.revokeObjectURL(m.url); } });
+      try {
+        const res = await api('/api/folder-invitations/' + state.sharedFolder.id + '/files/' + f.id + '?inline=true', { raw: true });
+        const blob = await res.blob();
+        if (!m.isConnected) return;
+        m.url = URL.createObjectURL(blob);
+        const body = $('.modal-body', m), type = f.contentType || '';
+        if (type.startsWith('image/')) body.innerHTML = '<img src="' + m.url + '" alt="">';
+        else if (type.startsWith('video/')) body.innerHTML = '<video src="' + m.url + '" controls></video>';
+        else if (type.startsWith('audio/')) body.innerHTML = '<audio src="' + m.url + '" controls></audio>';
+        else body.innerHTML = '<iframe src="' + m.url + '" title="PDF"></iframe>';
+      } catch (e) { if (m.isConnected) $('.modal-body', m).textContent = 'Could not load preview.'; }
+    }));
     $$("[data-act=upload]", v).forEach((b) => b.addEventListener("click", pickFiles));
     $$("[data-folder-id]", v).forEach((el) => {
       el.addEventListener("click", (e) => { if (!e.target.closest("[data-menu-folder]")) go("files", el.dataset.folderId); });
@@ -352,6 +448,7 @@
     if (!f) return;
     popup([
       { icon: "folder", label: "Open", run: () => go("files", f.id) },
+      { icon: "share", label: "Share folder", run: () => folderShareDialog(f) },
       { icon: "edit", label: "Rename", run: () => renameFolder(f) },
       "-",
       { icon: "trash", label: "Delete folder", danger: true, run: () => deleteFolder(f) }
@@ -522,6 +619,55 @@
 
   function shareUrl(token) {
     return location.origin + "/share.html?t=" + encodeURIComponent(token);
+  }
+
+  function folderShareDialog(f) {
+    const m = modal({
+      title: 'Share folder “' + f.name + '”',
+      body: '<p class="muted small">People can view and download this folder and its contents. Account invitations require acceptance.</p>' +
+        '<form data-invite-form class="share-action"><input class="input" name="username" placeholder="Username" required maxlength="50" aria-label="Username">' +
+        '<button class="btn primary" type="submit">Invite</button></form>' +
+        '<div data-invitations></div><div class="share-action"><select class="input" data-expiry aria-label="Link expiration"><option value="">Link never expires</option><option value="1">1 hour</option><option value="24">24 hours</option><option value="168">7 days</option></select>' +
+        '<button class="btn" data-create-folder-link>Create link</button></div><div data-folder-links></div>',
+      foot: '<button class="btn" data-done>Done</button>'
+    });
+    $('[data-done]', m).addEventListener('click', () => m.close());
+    async function refresh() {
+      try {
+        const [invites, links] = await Promise.all([api('/api/folders/' + f.id + '/invitations'), api('/api/folders/' + f.id + '/links')]);
+        $('[data-invitations]', m).innerHTML = invites.length ? '<div class="section-title">People</div>' + invites.map((i) =>
+          '<div class="shared-manage"><span>' + esc(i.recipient) + ' <span class="muted small">· ' + (i.status === 'PENDING' ? 'Pending' : 'Accepted') + '</span></span><button class="btn" data-revoke-invite="' + i.id + '">Remove</button></div>').join('') : '';
+        $('[data-folder-links]', m).innerHTML = links.length ? '<div class="section-title">Links</div>' + links.map((l) =>
+          '<div class="shared-manage"><span class="muted small">' + (l.expiresAt ? 'Expires ' + esc(fullDate(l.expiresAt)) : 'Never expires') + '</span><div><button class="btn" data-copy-folder-link="' + esc(l.token) + '">Copy</button> <button class="btn" data-revoke-folder-link="' + l.id + '">Revoke</button></div></div>').join('') : '';
+        $$('[data-revoke-invite]', m).forEach((b) => b.addEventListener('click', async () => {
+          try { await api('/api/folder-invitations/' + b.dataset.revokeInvite, { method: 'DELETE' }); await refresh(); toast('Access removed'); } catch (e) { toast(e.message, 'error'); }
+        }));
+        $$('[data-copy-folder-link]', m).forEach((b) => b.addEventListener('click', async () => {
+          try { await N.copyText(location.origin + '/folder-share.html?t=' + encodeURIComponent(b.dataset.copyFolderLink)); toast('Link copied'); } catch (e) { toast(e.message, 'error'); }
+        }));
+        $$('[data-revoke-folder-link]', m).forEach((b) => b.addEventListener('click', async () => {
+          try { await api('/api/folder-links/' + b.dataset.revokeFolderLink, { method: 'DELETE' }); await refresh(); toast('Link revoked'); } catch (e) { toast(e.message, 'error'); }
+        }));
+      } catch (e) { toast(e.message, 'error'); }
+    }
+    $('[data-invite-form]', m).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = $('[name=username]', m);
+      try {
+        await api('/api/folders/' + f.id + '/invitations', { method: 'POST', body: { username: input.value.trim() } });
+        input.value = ''; await refresh(); toast('Invitation sent');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+    $('[data-create-folder-link]', m).addEventListener('click', async () => {
+      try {
+        const hours = $('[data-expiry]', m).value;
+        const link = await api('/api/folders/' + f.id + '/links', { method: 'POST', body: { expiresInHours: hours ? +hours : null } });
+        await refresh();
+        try { await N.copyText(location.origin + '/folder-share.html?t=' + encodeURIComponent(link.token)); toast('Link created and copied'); }
+        catch (e) { toast('Link created. Use Copy to copy it.'); }
+      } catch (e) { toast(e.message, 'error'); }
+    });
+    refresh();
   }
 
   async function shareDialog(f) {
@@ -770,5 +916,10 @@
   });
 
   loadProfile();
+  loadInvitations();
+  setInterval(async () => {
+    await loadInvitations();
+    if (state.view === 'incoming') render();
+  }, 30000);
   fromHash();
 })();

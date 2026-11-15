@@ -16,7 +16,7 @@ Nimbus Drive là nền tảng lưu trữ file trên cloud (kiểu Google Drive t
 | File | Upload kéo-thả nhiều file có thanh tiến độ, tải xuống, đổi tên, gắn sao, xóa, tìm kiếm |
 | Thư mục | Thư mục lồng nhau, breadcrumb, kéo file thả vào thư mục, di chuyển, xóa đệ quy |
 | Xem trước | Ảnh, PDF, video, audio, text/code ngay trên trình duyệt |
-| Chia sẻ | Link công khai có thời hạn (1 giờ → không hết hạn), đếm lượt tải, thu hồi |
+| Chia sẻ | Link file/thư mục có thời hạn và thu hồi; mời tài khoản nhận thư mục, chấp nhận hoặc từ chối trong ứng dụng |
 | S3 | Presigned URL tải trực tiếp từ S3 (15 phút), chạy được với AWS S3 / SeaweedFS / MinIO / Ceph |
 | Quota | Mỗi user 1 GB (cấu hình được), thống kê dung lượng theo loại file |
 | Vận hành | Health/liveness/readiness, Prometheus metrics, dashboard Grafana, Swagger UI, log xoay vòng |
@@ -77,6 +77,13 @@ H2 database + lưu file vào thư mục `./data`:
 | POST | `/api/files/{id}/shares` | Tạo link chia sẻ |
 | GET/DELETE | `/api/shares` | Link của tôi / thu hồi |
 | GET | `/api/public/shares/{token}[/download]` | Công khai, không cần đăng nhập |
+| POST/GET | `/api/folders/{id}/invitations`, `/api/folder-invitations` | Mời theo username / xem lời mời |
+| POST | `/api/folder-invitations/{id}/accept` hoặc `/decline` | Chấp nhận hoặc từ chối lời mời |
+| POST/GET | `/api/folders/{id}/links`, `/api/public/folders/{token}` | Tạo link thư mục / xem nội dung công khai |
+
+Thư mục được chia sẻ cho phép xem và tải xuống, bao gồm các thư mục con; người nhận không có quyền sửa.
+Lời mời hiện trong mục **Shared with me** của ứng dụng, không gửi email. Người giữ link có thể xem và tải xuống
+cho đến khi link hết hạn hoặc bị thu hồi.
 
 Lỗi trả về chuẩn RFC 7807 (`application/problem+json`).
 
