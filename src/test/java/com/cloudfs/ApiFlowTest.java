@@ -12,20 +12,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipInputStream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cloudfs.service.TrashService;
 
 /** Kiem thu end-to-end cac API qua MockMvc, voi H2 + storage local (khong can Docker). */
 @SpringBootTest
@@ -38,6 +47,12 @@ class ApiFlowTest {
 
     @Autowired
     ObjectMapper json;
+
+    @Autowired
+    JdbcTemplate db;
+
+    @Autowired
+    TrashService trashService;
 
     private String register(String user) throws Exception {
         String body = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
@@ -176,6 +191,107 @@ class ApiFlowTest {
     }
 
     @Test
+    void zipDownloadPreservesNestedFoldersAndRejectsOtherUsersFiles() throws Exception {
+        String owner = register(uniq("zipowner"));
+        String stranger = register(uniq("zipother"));
+        String root = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Photos\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String child = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"2026\",\"parentId\":\"" + root + "\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        upload(owner, "one.txt", "nested file", child);
+        String duplicate1 = upload(owner, "same.txt", "first", null).get("id").asText();
+        String duplicate2 = upload(owner, "same.txt", "second", null).get("id").asText();
+        String body = "{\"folderIds\":[\"" + root + "\"],\"fileIds\":[\"" + duplicate1 + "\",\"" + duplicate2 + "\"]}";
+        mvc.perform(post("/api/downloads/zip").header("Authorization", stranger).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound());
+        var pending = mvc.perform(post("/api/downloads/zip").header("Authorization", owner).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(request().asyncStarted()).andReturn();
+        byte[] zip = mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        Map<String, String> entries = new HashMap<>();
+        try (var in = new ZipInputStream(new ByteArrayInputStream(zip), StandardCharsets.UTF_8)) {
+            for (var entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
+                entries.put(entry.getName(), new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertEquals("nested file", entries.get("Photos/2026/one.txt"));
+        org.junit.jupiter.api.Assertions.assertEquals("first", entries.get("same.txt"));
+        org.junit.jupiter.api.Assertions.assertEquals("second", entries.get("same (2).txt"));
+    }
+
+    @Test
+    void trashHidesRestoresAndPermanentlyDeletesFilesAndFolders() throws Exception {
+        String owner = register(uniq("trashowner"));
+        String stranger = register(uniq("trashother"));
+        String folder = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Archive\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String file = upload(owner, "inside.txt", "data", folder).get("id").asText();
+        mvc.perform(delete("/api/folders/" + folder).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/files/" + file).header("Authorization", owner)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/trash").header("Authorization", owner)).andExpect(jsonPath("$[0].name", is("Archive")));
+        mvc.perform(post("/api/trash/folders/" + folder + "/restore").header("Authorization", stranger)).andExpect(status().isNotFound());
+        mvc.perform(post("/api/trash/folders/" + folder + "/restore").header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/files/" + file).header("Authorization", owner)).andExpect(status().isOk());
+        mvc.perform(delete("/api/files/" + file).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/trash/files/" + file).header("Authorization", stranger)).andExpect(status().isNotFound());
+        mvc.perform(delete("/api/trash/files/" + file).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(post("/api/trash/files/" + file + "/restore").header("Authorization", owner)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void trashKeepsEarlierDeletionSeparateAndDisablesShareUntilRestored() throws Exception {
+        String owner = register(uniq("recover"));
+        String folder = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Archive\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String earlier = upload(owner, "earlier.txt", "early", folder).get("id").asText();
+        String current = upload(owner, "current.txt", "current", folder).get("id").asText();
+        JsonNode link = json.readTree(mvc.perform(post("/api/files/" + current + "/shares").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        String publicUrl = "/api/public/shares/" + link.get("token").asText();
+        mvc.perform(delete("/api/files/" + earlier).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/folders/" + folder).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get(publicUrl)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/me").header("Authorization", owner)).andExpect(jsonPath("$.usedBytes", is(12)));
+        mvc.perform(post("/api/trash/folders/" + folder + "/restore").header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get(publicUrl)).andExpect(status().isOk());
+        mvc.perform(get("/api/files/" + earlier).header("Authorization", owner)).andExpect(status().isNotFound());
+        mvc.perform(post("/api/trash/files/" + earlier + "/restore").header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/files/" + earlier).header("Authorization", owner)).andExpect(jsonPath("$.folderId", is(folder)));
+    }
+
+    @Test
+    void expiredTrashCannotBeRestoredAndIsPurged() throws Exception {
+        String owner = register(uniq("expire"));
+        String file = upload(owner, "expire.txt", "old", null).get("id").asText();
+        mvc.perform(delete("/api/files/" + file).header("Authorization", owner)).andExpect(status().isNoContent());
+        db.update("UPDATE files SET deleted_at = ? WHERE id = ?", java.sql.Timestamp.from(java.time.Instant.now().minus(java.time.Duration.ofDays(31))), UUID.fromString(file));
+        mvc.perform(post("/api/trash/files/" + file + "/restore").header("Authorization", owner)).andExpect(status().isGone());
+        trashService.purgeExpired();
+        mvc.perform(get("/api/trash").header("Authorization", owner)).andExpect(jsonPath("$", hasSize(0)));
+        trashService.deleteQueuedObjects();
+        org.junit.jupiter.api.Assertions.assertEquals(0, db.queryForObject("SELECT count(*) FROM pending_object_deletions", Integer.class));
+    }
+
+    @Test
+    void restoredFileReturnsToRootWhenItsOriginalFolderIsInTrash() throws Exception {
+        String owner = register(uniq("moved"));
+        String folder = json.readTree(mvc.perform(post("/api/folders").header("Authorization", owner)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Old\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String file = upload(owner, "saved.txt", "hello", folder).get("id").asText();
+        mvc.perform(delete("/api/files/" + file).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/folders/" + folder).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(post("/api/trash/files/" + file + "/restore").header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/files").header("Authorization", owner)).andExpect(jsonPath("$[0].name", is("saved.txt")));
+        mvc.perform(delete("/api/trash/folders/" + folder).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/files/" + file).header("Authorization", owner)).andExpect(status().isOk());
+    }
+
+    @Test
     void publicShareLinkWorksUntilRevoked() throws Exception {
         String token = register(uniq("s"));
         String fileId = upload(token, "shared.txt", "public data", null).get("id").asText();
@@ -228,6 +344,8 @@ class ApiFlowTest {
                 .andExpect(jsonPath("$[0].status", is("PENDING")));
         mvc.perform(get("/api/folder-invitations/" + id + "/contents").header("Authorization", recipient))
                 .andExpect(status().isNotFound());
+        mvc.perform(get("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient))
+                .andExpect(status().isNotFound());
         mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", stranger))
                 .andExpect(status().isNotFound());
         mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", recipient))
@@ -237,6 +355,11 @@ class ApiFlowTest {
         mvc.perform(get("/api/folder-invitations/" + id + "/files/" + inside).header("Authorization", recipient))
                 .andExpect(content().string("inside"));
         mvc.perform(get("/api/folder-invitations/" + id + "/files/" + outside).header("Authorization", recipient))
+                .andExpect(status().isNotFound());
+        var archive = mvc.perform(get("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient))
+                .andExpect(request().asyncStarted()).andReturn();
+        mvc.perform(asyncDispatch(archive)).andExpect(status().isOk()).andExpect(header().string("Content-Type", "application/zip"));
+        mvc.perform(get("/api/folder-invitations/" + id + "/zip?folderId=" + UUID.randomUUID()).header("Authorization", recipient))
                 .andExpect(status().isNotFound());
         mvc.perform(delete("/api/folder-invitations/" + id).header("Authorization", owner))
                 .andExpect(status().isNoContent());
@@ -259,6 +382,8 @@ class ApiFlowTest {
         mvc.perform(get(url)).andExpect(jsonPath("$.files[0].name", is("inside.txt")));
         mvc.perform(get(url + "/files/" + inside)).andExpect(content().string("public"));
         mvc.perform(get(url + "/files/" + outside)).andExpect(status().isNotFound());
+        var archive = mvc.perform(get(url + "/zip")).andExpect(request().asyncStarted()).andReturn();
+        mvc.perform(asyncDispatch(archive)).andExpect(status().isOk());
         mvc.perform(get(url + "?folderId=" + UUID.randomUUID())).andExpect(status().isNotFound());
         mvc.perform(delete("/api/folder-links/" + link.get("id").asText()).header("Authorization", owner))
                 .andExpect(status().isNoContent());

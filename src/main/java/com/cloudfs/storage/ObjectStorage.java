@@ -18,6 +18,9 @@ public interface ObjectStorage {
 
     void delete(String key);
 
+    /** Remove all versions when the storage backend supports versioning. */
+    default void deletePermanently(String key) { delete(key); }
+
     /** URL tai truc tiep tu storage, co chu ky va thoi han; rong neu backend khong ho tro. */
     Optional<URL> presignDownload(String key, String fileName, Duration ttl);
 

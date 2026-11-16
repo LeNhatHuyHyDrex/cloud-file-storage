@@ -75,8 +75,10 @@ public class StorageConfig {
 
         @Bean
         ObjectStorage objectStorage(S3Client s3, S3Presigner presigner,
-                                    @Value("${app.s3.bucket}") String bucket) {
-            S3ObjectStorage storage = new S3ObjectStorage(s3, presigner, bucket);
+                                    @Value("${app.s3.bucket}") String bucket,
+                                    @Value("${app.s3.endpoint:}") String endpoint,
+                                    @Value("${app.s3.purge-versions:false}") boolean purgeVersions) {
+            S3ObjectStorage storage = new S3ObjectStorage(s3, presigner, bucket, endpoint.isBlank() || purgeVersions);
             storage.ensureBucket(10, Duration.ofSeconds(3));
             return storage;
         }

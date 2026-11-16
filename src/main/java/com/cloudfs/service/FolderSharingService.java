@@ -57,7 +57,7 @@ public class FolderSharingService {
     }
 
     private static final String INVITATIONS = "SELECT i.id, i.folder_id, f.name, i.owner, i.recipient, i.status, i.created_at "
-            + "FROM folder_invitations i JOIN folders f ON f.id = i.folder_id ";
+            + "FROM folder_invitations i JOIN folders f ON f.id = i.folder_id AND f.deleted_at IS NULL ";
 
     @Transactional
     public Invitation invite(String owner, UUID folderId, String recipient) {
@@ -85,7 +85,7 @@ public class FolderSharingService {
 
     @Transactional
     public void accept(String recipient, UUID id) {
-        int updated = db.update("UPDATE folder_invitations SET status = 'ACCEPTED' WHERE id = ? AND recipient = ? AND status = 'PENDING'", id, recipient);
+        int updated = db.update("UPDATE folder_invitations SET status = 'ACCEPTED' WHERE id = ? AND recipient = ? AND status = 'PENDING' AND EXISTS (SELECT 1 FROM folders f WHERE f.id = folder_invitations.folder_id AND f.deleted_at IS NULL)", id, recipient);
         if (updated != 1) throw missing();
     }
 
@@ -173,4 +173,12 @@ public class FolderSharingService {
     public FileMeta invitationFile(String user, UUID id, UUID fileId) { return file(invitationGrant(user, id), fileId); }
     public Contents linkContents(String token, UUID folderId) { return contents(linkGrant(token), folderId); }
     public FileMeta linkFile(String token, UUID fileId) { return file(linkGrant(token), fileId); }
+    public Folder invitationFolder(String user, UUID id, UUID folderId) {
+        Grant grant = invitationGrant(user, id);
+        return inSubtree(grant, folderId == null ? grant.folderId() : folderId);
+    }
+    public Folder linkFolder(String token, UUID folderId) {
+        Grant grant = linkGrant(token);
+        return inSubtree(grant, folderId == null ? grant.folderId() : folderId);
+    }
 }

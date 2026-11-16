@@ -21,6 +21,8 @@ spring:
   flyway:
     enabled: true
   mvc:
+    async:
+      request-timeout: 30m
     problemdetails:
       enabled: true
   web:
@@ -77,6 +79,7 @@ app:
     secret-key: ${S3_SECRET_KEY:cloudfs-secret}
     path-style: ${S3_PATH_STYLE:true}
     presign-ttl-minutes: 15
+    purge-versions: ${S3_PURGE_VERSIONS:false}
   login:
     max-failures: 5
     lock-minutes: 5

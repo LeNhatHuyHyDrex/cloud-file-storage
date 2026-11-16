@@ -7,10 +7,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 /** Metadata cua file; noi dung file nam trong object storage duoi khoa objectKey. */
 @Entity
 @Table(name = "files")
+@SQLRestriction("deleted_at IS NULL")
 public class FileMeta {
 
     @Id

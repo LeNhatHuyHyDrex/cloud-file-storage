@@ -7,10 +7,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 /** Thu muc ao: chi ton tai trong DB, object tren S3 van nam phang theo owner/uuid. */
 @Entity
 @Table(name = "folders")
+@SQLRestriction("deleted_at IS NULL")
 public class Folder {
 
     @Id

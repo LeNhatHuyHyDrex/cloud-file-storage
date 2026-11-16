@@ -20,6 +20,7 @@ import com.cloudfs.dto.Dtos.CreateFolderRequest;
 import com.cloudfs.dto.Dtos.FolderDto;
 import com.cloudfs.dto.Dtos.NameRequest;
 import com.cloudfs.service.FolderService;
+import com.cloudfs.service.TrashService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,9 +34,11 @@ import jakarta.validation.Valid;
 public class FolderController {
 
     private final FolderService folders;
+    private final TrashService trash;
 
-    public FolderController(FolderService folders) {
+    public FolderController(FolderService folders, TrashService trash) {
         this.folders = folders;
+        this.trash = trash;
     }
 
     @Operation(summary = "Subfolders of `parentId` (empty = root); `all=true` returns every folder")
@@ -68,6 +71,6 @@ public class FolderController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id, Authentication auth) {
-        folders.delete(auth.getName(), id);
+        trash.trashFolder(auth.getName(), id);
     }
 }

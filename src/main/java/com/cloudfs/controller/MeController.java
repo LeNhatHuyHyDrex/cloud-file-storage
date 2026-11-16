@@ -54,7 +54,7 @@ public class MeController {
             used += f.getSize();
             count++;
         }
-        return new ProfileDto(user.getUsername(), user.getCreatedAt(), used, user.getQuotaBytes(), count,
+        return new ProfileDto(user.getUsername(), user.getCreatedAt(), fileService.storageUsed(user.getUsername()), user.getQuotaBytes(), count,
                 folders.countByOwner(user.getUsername()), fileService.backendName(), byCategory);
     }
 }

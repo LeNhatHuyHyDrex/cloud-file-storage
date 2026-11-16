@@ -121,12 +121,12 @@ data "aws_iam_policy_document" "assume_ec2" {
 data "aws_iam_policy_document" "s3_access" {
   statement {
     sid       = "ListBucket"
-    actions   = ["s3:ListBucket", "s3:GetBucketLocation"]
+    actions   = ["s3:ListBucket", "s3:ListBucketVersions", "s3:GetBucketLocation"]
     resources = [aws_s3_bucket.files.arn]
   }
   statement {
     sid       = "ObjectReadWrite"
-    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:DeleteObjectVersion"]
     resources = ["${aws_s3_bucket.files.arn}/*"]
   }
 }

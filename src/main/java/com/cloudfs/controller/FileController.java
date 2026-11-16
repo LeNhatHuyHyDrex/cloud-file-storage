@@ -37,6 +37,7 @@ import com.cloudfs.dto.Dtos.StarRequest;
 import com.cloudfs.model.FileMeta;
 import com.cloudfs.service.FileService;
 import com.cloudfs.service.ShareService;
+import com.cloudfs.service.TrashService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -52,10 +53,12 @@ public class FileController {
 
     private final FileService files;
     private final ShareService shares;
+    private final TrashService trash;
 
-    public FileController(FileService files, ShareService shares) {
+    public FileController(FileService files, ShareService shares, TrashService trash) {
         this.files = files;
         this.shares = shares;
+        this.trash = trash;
     }
 
     @Operation(summary = "Upload 1 file (multipart, field `file`)")
@@ -155,7 +158,7 @@ public class FileController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id, Authentication auth) {
-        files.delete(auth.getName(), id);
+        trash.trashFile(auth.getName(), id);
     }
 
     @Operation(summary = "Create a public share link")

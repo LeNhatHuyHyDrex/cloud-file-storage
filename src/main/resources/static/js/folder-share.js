@@ -17,7 +17,7 @@
       const c = await res.json();
       document.title = c.rootName + ' — Nimbus Drive';
       view.innerHTML = '<div class="shared-folder-head">' + (path.length ? '<button class="btn" data-back>Back</button>' : '') +
-        '<div><h1>' + esc(c.folderName) + '</h1><p class="muted">Shared by ' + esc(c.owner) + ' · View and download</p></div></div>' +
+        '<div><h1>' + esc(c.folderName) + '</h1><p class="muted">Shared by ' + esc(c.owner) + ' · View and download</p></div><a class="btn" href="' + base + '/zip' + (folderId ? '?folderId=' + encodeURIComponent(folderId) : '') + '">Download folder ZIP</a></div>' +
         '<div class="shared-items">' + c.folders.map((f) => '<button class="shared-item shared-entry" data-folder="' + f.id + '">' + folderIcon() + '<span>' + esc(f.name) + '</span></button>').join('') +
         c.files.map((f) => '<div class="shared-item">' + fileIcon(f.category) + '<div class="shared-item-info"><strong>' + esc(f.name) + '</strong><span class="muted small">' + bytes(f.size) + '</span></div>' +
           (/^(image\/(png|jpeg|gif|webp|bmp)|video\/|audio\/|application\/pdf)/i.test(f.contentType || '') ? '<a class="btn" target="_blank" rel="noopener noreferrer" href="' + base + '/files/' + f.id + '?inline=true">View</a>' : '') +

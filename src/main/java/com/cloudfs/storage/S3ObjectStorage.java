@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 /** Adapter cho moi storage noi giao thuc S3 (AWS S3, SeaweedFS, MinIO, Ceph RGW...). */
@@ -28,11 +30,17 @@ public class S3ObjectStorage implements ObjectStorage {
     private final S3Client s3;
     private final S3Presigner presigner;
     private final String bucket;
+    private final boolean purgeVersions;
 
     public S3ObjectStorage(S3Client s3, S3Presigner presigner, String bucket) {
+        this(s3, presigner, bucket, false);
+    }
+
+    public S3ObjectStorage(S3Client s3, S3Presigner presigner, String bucket, boolean purgeVersions) {
         this.s3 = s3;
         this.presigner = presigner;
         this.bucket = bucket;
+        this.purgeVersions = purgeVersions;
     }
 
     /** Tao bucket neu chua co; thu lai vai lan vi storage co the khoi dong cham hon app. */
@@ -85,6 +93,28 @@ public class S3ObjectStorage implements ObjectStorage {
     @Override
     public void delete(String key) {
         s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    }
+
+    @Override
+    public void deletePermanently(String key) {
+        if (!purgeVersions) { delete(key); return; }
+        var versionIds = new ArrayList<String>();
+        String keyMarker = null, versionMarker = null;
+        boolean more;
+        do {
+            var request = ListObjectVersionsRequest.builder().bucket(bucket).prefix(key)
+                    .keyMarker(keyMarker).versionIdMarker(versionMarker).build();
+            var page = s3.listObjectVersions(request);
+            page.versions().stream().filter(v -> key.equals(v.key())).forEach(v -> versionIds.add(v.versionId()));
+            page.deleteMarkers().stream().filter(v -> key.equals(v.key())).forEach(v -> versionIds.add(v.versionId()));
+            more = Boolean.TRUE.equals(page.isTruncated());
+            keyMarker = page.nextKeyMarker();
+            versionMarker = page.nextVersionIdMarker();
+            if (more && keyMarker == null) throw new IllegalStateException("Object version listing did not provide a continuation marker");
+        } while (more);
+        for (String versionId : versionIds) {
+            s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).versionId(versionId).build());
+        }
     }
 
     @Override

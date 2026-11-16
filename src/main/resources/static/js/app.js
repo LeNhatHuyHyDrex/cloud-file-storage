@@ -21,12 +21,14 @@
     shares: [],
     invitations: [],
     sharedFolder: null,
+    trash: [],
     query: "",
     layout: (() => { try { return localStorage.getItem(LAYOUT_KEY) || "grid"; } catch (e) { return "grid"; } })(),
     profile: null,
     loading: false
   };
   const thumbs = new Map(); // fileId -> objectURL
+  const selected = new Set();
 
   // ---------- Static icons ----------
   function hydrateIcons(root) {
@@ -93,6 +95,8 @@
         state.shares = await api("/api/shares");
       } else if (state.view === "incoming") {
         await loadInvitations();
+      } else if (state.view === "trash") {
+        state.trash = await api("/api/trash");
       } else if (state.view === "shared-folder") {
         const s = state.sharedFolder;
         s.contents = await api("/api/folder-invitations/" + s.id + "/contents" + (s.folderId ? "?folderId=" + s.folderId : ""));
@@ -104,11 +108,16 @@
       }
       toast(e.message, "error");
     }
+    if (["files", "recent", "starred", "search"].includes(state.view)) {
+      const visible = new Set(state.files.map((f) => 'f:' + f.id).concat(state.folders.map((f) => 'd:' + f.id)));
+      for (const key of selected) if (!visible.has(key)) selected.delete(key);
+    }
     state.loading = false;
     render();
   }
 
   function go(view, folderId) {
+    if (view !== state.view || (folderId || null) !== state.folderId) selected.clear();
     state.view = view;
     state.folderId = folderId || null;
     if (view !== "search") {
@@ -125,13 +134,13 @@
   function fromHash() {
     const h = location.hash.replace(/^#\/?/, "");
     if (h.startsWith("folder/")) return go("files", h.slice(7));
-    if (["recent", "starred", "shared", "incoming"].includes(h)) return go(h);
+    if (["recent", "starred", "shared", "incoming", "trash"].includes(h)) return go(h);
     go("files");
   }
   window.addEventListener("popstate", fromHash);
 
   // ---------- Rendering ----------
-  const TITLES = { recent: "Recent", starred: "Starred", shared: "Shared links", incoming: "Shared with me", "shared-folder": "Shared folder" };
+  const TITLES = { recent: "Recent", starred: "Starred", shared: "Shared links", incoming: "Shared with me", "shared-folder": "Shared folder", trash: "Trash" };
 
   function renderCrumbs() {
     const c = $("#crumbs");
@@ -147,7 +156,7 @@
     }
     const canCreate = state.view === "files";
     $("#btn-new-folder").classList.toggle("hidden", !canCreate);
-    $(".view-toggle").classList.toggle("hidden", ["shared", "incoming", "shared-folder"].includes(state.view));
+    $(".view-toggle").classList.toggle("hidden", ["shared", "incoming", "shared-folder", "trash"].includes(state.view));
     $$(".view-toggle button").forEach((b) => b.classList.toggle("active", b.dataset.layout === state.layout));
   }
 
@@ -165,7 +174,7 @@
   }
 
   function folderCard(f) {
-    return '<div class="folder-card" data-folder-id="' + f.id + '" title="' + esc(f.name) + '">' + folderIcon() +
+    return '<div class="folder-card' + (selected.has('d:' + f.id) ? ' selected' : '') + '" data-folder-id="' + f.id + '" title="' + esc(f.name) + '">' + selectBox('d', f) + folderIcon() +
       '<div class="name">' + esc(f.name) + "</div>" +
       '<button class="icon-btn" data-menu-folder="' + f.id + '" aria-label="Options">' + icon("more") + "</button></div>";
   }
@@ -174,7 +183,7 @@
     const thumb = thumbs.get(f.id)
       ? '<img src="' + thumbs.get(f.id) + '" alt="">'
       : fileIcon(f.category);
-    return '<div class="file-card" draggable="true" data-file-id="' + f.id + '" title="' + esc(f.name) + '">' +
+    return '<div class="file-card' + (selected.has('f:' + f.id) ? ' selected' : '') + '" draggable="true" data-file-id="' + f.id + '" title="' + esc(f.name) + '">' + selectBox('f', f) +
       '<div class="thumb">' + thumb + (ext(f.name) ? '<span class="ext">' + esc(ext(f.name)) + "</span>" : "") +
       (f.starred ? '<span class="star-badge">' + icon("star") + "</span>" : "") + "</div>" +
       '<div class="meta"><div class="txt"><div class="name">' + esc(f.name) + '</div><div class="sub">' +
@@ -184,11 +193,11 @@
 
   function listView() {
     const rows = state.folders.map((f) =>
-      '<tr data-folder-id="' + f.id + '"><td><div class="cell-name">' + folderIcon() + "<span>" + esc(f.name) + "</span></div></td>" +
+      '<tr data-folder-id="' + f.id + '"><td><div class="cell-name">' + selectBox('d', f) + folderIcon() + "<span>" + esc(f.name) + "</span></div></td>" +
       '<td class="num">—</td><td class="num hide-sm">' + date(f.createdAt) + '</td><td class="num hide-sm">Folder</td>' +
       '<td class="act"><button class="icon-btn" data-menu-folder="' + f.id + '">' + icon("more") + "</button></td></tr>"
     ).concat(state.files.map((f) =>
-      '<tr data-file-id="' + f.id + '" draggable="true"><td><div class="cell-name">' + fileIcon(f.category) + "<span>" + esc(f.name) + "</span>" +
+      '<tr data-file-id="' + f.id + '" draggable="true"><td><div class="cell-name">' + selectBox('f', f) + fileIcon(f.category) + "<span>" + esc(f.name) + "</span>" +
       (f.starred ? '<span style="color:var(--accent)">' + icon("star") + "</span>" : "") + "</div></td>" +
       '<td class="num">' + bytes(f.size) + '</td><td class="num hide-sm" title="' + fullDate(f.uploadedAt) + '">' + date(f.uploadedAt) +
       '</td><td class="num hide-sm">' + (N.CAT_LABEL[f.category] || "Other") + "</td>" +
@@ -196,6 +205,29 @@
     ));
     return '<div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Size</th><th class="hide-sm">Uploaded</th>' +
       '<th class="hide-sm">Type</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div>";
+  }
+
+  function selectBox(kind, item) {
+    const key = kind + ':' + item.id;
+    return '<input class="item-select" type="checkbox" data-select="' + key + '" aria-label="Select ' + esc(item.name) + '"' + (selected.has(key) ? ' checked' : '') + '>';
+  }
+
+  function selectionBar() {
+    return '<div class="selection-bar"><label><input type="checkbox" data-select-all> Select all</label>' +
+      '<span data-selection-count aria-live="polite">0 selected</span><button class="btn" data-download-selected disabled>Download separately</button>' +
+      '<button class="btn primary" data-download-zip disabled>Download ZIP</button><button class="btn" data-clear-selection disabled>Clear</button></div>';
+  }
+
+  function updateSelection(v) {
+    const boxes = $$('[data-select]', v);
+    const checked = boxes.filter((b) => selected.has(b.dataset.select)).length;
+    boxes.forEach((b) => { b.checked = selected.has(b.dataset.select); const card = b.closest('.file-card, .folder-card, tr'); if (card) card.classList.toggle('selected', b.checked); });
+    const all = $('[data-select-all]', v);
+    if (!all) return;
+    all.checked = boxes.length > 0 && checked === boxes.length;
+    all.indeterminate = checked > 0 && checked < boxes.length;
+    $('[data-selection-count]', v).textContent = checked + (checked === 1 ? ' selected' : ' selected');
+    $$('[data-download-selected], [data-download-zip], [data-clear-selection]', v).forEach((b) => { b.disabled = checked === 0; });
   }
 
   function sharedView() {
@@ -222,12 +254,19 @@
   function sharedFolderView() {
     const s = state.sharedFolder, c = s && s.contents;
     if (!c) return '<div class="muted">Loading folder...</div>';
-    return '<div class="shared-folder-head"><button class="btn" data-shared-back>' + icon("chevron") + 'Back</button><div><strong>' + esc(c.folderName) + '</strong><div class="muted small">Shared by ' + esc(c.owner) + ' · View and download</div></div></div>' +
+    return '<div class="shared-folder-head"><button class="btn" data-shared-back>' + icon("chevron") + 'Back</button><div><strong>' + esc(c.folderName) + '</strong><div class="muted small">Shared by ' + esc(c.owner) + ' · View and download</div></div><button class="btn" data-shared-folder-download>Download folder ZIP</button></div>' +
       '<div class="shared-items">' + c.folders.map((f) => '<button class="shared-item shared-entry" data-shared-folder="' + f.id + '">' + folderIcon() + '<span>' + esc(f.name) + '</span></button>').join("") +
       c.files.map((f) => '<div class="shared-item">' + fileIcon(f.category) + '<div class="shared-item-info"><strong>' + esc(f.name) + '</strong><span class="muted small">' + bytes(f.size) + '</span></div>' +
         (/^(image\/(png|jpeg|gif|webp|bmp)|video\/|audio\/|application\/pdf)/i.test(f.contentType || '') ? '<button class="btn" data-shared-preview="' + f.id + '">Preview</button>' : '') +
         '<button class="btn" data-shared-download="' + f.id + '">Download</button></div>').join("") +
       (!c.folders.length && !c.files.length ? '<p class="muted">This folder is empty.</p>' : '') + '</div>';
+  }
+
+  function trashView() {
+    if (!state.trash.length) return '<div class="empty"><div class="art">' + icon('trash') + '</div><h3>Trash is empty</h3><p>Items in trash are automatically deleted after 30 days.</p></div>';
+    return '<p class="muted small">Items in trash are automatically deleted after 30 days. They still count toward your storage quota.</p><div class="shared-items">' + state.trash.map((item) =>
+      '<div class="shared-item">' + (item.type === 'folder' ? folderIcon() : fileIcon('other')) + '<div class="shared-item-info"><strong>' + esc(item.name) + '</strong><span class="muted small">' + (item.type === 'folder' ? 'Folder' : 'File') + ' · Deletes after ' + esc(fullDate(item.expiresAt)) + '</span></div>' +
+      '<button class="btn" data-trash-restore="' + item.type + ':' + item.id + '">Restore</button><button class="btn" data-trash-purge="' + item.type + ':' + item.id + '">Delete permanently</button></div>').join('') + '</div>';
   }
 
   function render() {
@@ -237,7 +276,9 @@
       v.innerHTML = '<div class="grid">' + '<div class="skeleton"></div>'.repeat(6) + "</div>";
       return;
     }
-    if (state.view === "incoming") {
+    if (state.view === "trash") {
+      v.innerHTML = trashView();
+    } else if (state.view === "incoming") {
       v.innerHTML = invitationsView();
     } else if (state.view === "shared-folder") {
       v.innerHTML = sharedFolderView();
@@ -253,7 +294,9 @@
         (state.files.length ? '<div class="section-title">Files</div><div class="grid">' + state.files.map(fileCard).join("") + "</div>" : "");
       loadThumbs();
     }
+    if (["files", "recent", "starred", "search"].includes(state.view) && (state.files.length || state.folders.length)) v.insertAdjacentHTML('afterbegin', selectionBar());
     bindView(v);
+    updateSelection(v);
   }
 
   async function loadThumbs() {
@@ -313,6 +356,30 @@
   const folderById = (id) => state.folders.find((f) => f.id === id);
 
   function bindView(v) {
+    $$('[data-select]', v).forEach((box) => {
+      box.addEventListener('click', (e) => e.stopPropagation());
+      box.addEventListener('change', () => { if (box.checked) selected.add(box.dataset.select); else selected.delete(box.dataset.select); updateSelection(v); });
+    });
+    const selectAll = $('[data-select-all]', v);
+    if (selectAll) selectAll.addEventListener('change', () => {
+      $$('[data-select]', v).forEach((b) => { if (selectAll.checked) selected.add(b.dataset.select); else selected.delete(b.dataset.select); });
+      updateSelection(v);
+    });
+    const clearSelection = $('[data-clear-selection]', v);
+    if (clearSelection) clearSelection.addEventListener('click', () => { selected.clear(); updateSelection(v); });
+    const selectedDownload = $('[data-download-selected]', v);
+    if (selectedDownload) selectedDownload.addEventListener('click', downloadSelectedSeparately);
+    const selectedZip = $('[data-download-zip]', v);
+    if (selectedZip) selectedZip.addEventListener('click', () => downloadZip(selectedIds()));
+    $$('[data-trash-restore], [data-trash-purge]', v).forEach((b) => b.addEventListener('click', async () => {
+      const restoring = !!b.dataset.trashRestore;
+      const [type, id] = (b.dataset.trashRestore || b.dataset.trashPurge).split(':');
+      if (!restoring && !(await confirmDialog('Delete permanently?', 'This item and its contents cannot be restored.', 'Delete permanently'))) return;
+      try {
+        await api('/api/trash/' + (type === 'folder' ? 'folders/' : 'files/') + id + (restoring ? '/restore' : ''), { method: restoring ? 'POST' : 'DELETE' });
+        toast(restoring ? 'Restored' : 'Deleted permanently'); await load(); loadProfile();
+      } catch (e) { toast(e.message, 'error'); }
+    }));
     $$('[data-accept], [data-decline]', v).forEach((b) => b.addEventListener("click", async () => {
       const id = b.dataset.accept || b.dataset.decline;
       try {
@@ -336,6 +403,11 @@
       if (!state.sharedFolder.path.length) return go('incoming');
       state.sharedFolder.folderId = state.sharedFolder.path.pop();
       state.sharedFolder.contents = null; load();
+    });
+    const sharedFolderDownload = $('[data-shared-folder-download]', v);
+    if (sharedFolderDownload) sharedFolderDownload.addEventListener('click', () => {
+      const s = state.sharedFolder;
+      downloadArchive('/api/folder-invitations/' + s.id + '/zip' + (s.folderId ? '?folderId=' + s.folderId : ''), {}, s.contents.folderName + '.zip');
     });
     $$('[data-shared-download]', v).forEach((b) => b.addEventListener('click', async () => {
       const f = state.sharedFolder.contents.files.find((x) => x.id === b.dataset.sharedDownload);
@@ -365,7 +437,7 @@
     }));
     $$("[data-act=upload]", v).forEach((b) => b.addEventListener("click", pickFiles));
     $$("[data-folder-id]", v).forEach((el) => {
-      el.addEventListener("click", (e) => { if (!e.target.closest("[data-menu-folder]")) go("files", el.dataset.folderId); });
+      el.addEventListener("click", (e) => { if (!e.target.closest("[data-menu-folder], [data-select]")) go("files", el.dataset.folderId); });
       el.addEventListener("dragover", (e) => {
         if (e.dataTransfer.types.includes("application/x-nimbus-file")) { e.preventDefault(); el.classList.add("drop"); }
       });
@@ -380,7 +452,7 @@
       });
     });
     $$("[data-file-id]", v).forEach((el) => {
-      el.addEventListener("click", (e) => { if (!e.target.closest("[data-menu-file]")) preview(byId(el.dataset.fileId)); });
+      el.addEventListener("click", (e) => { if (!e.target.closest("[data-menu-file], [data-select]")) preview(byId(el.dataset.fileId)); });
       el.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("application/x-nimbus-file", el.dataset.fileId);
         e.dataTransfer.effectAllowed = "move";
@@ -448,6 +520,7 @@
     if (!f) return;
     popup([
       { icon: "folder", label: "Open", run: () => go("files", f.id) },
+      { icon: "download", label: "Download folder ZIP", run: () => downloadZip({ fileIds: [], folderIds: [f.id] }, f.name + '.zip') },
       { icon: "share", label: "Share folder", run: () => folderShareDialog(f) },
       { icon: "edit", label: "Rename", run: () => renameFolder(f) },
       "-",
@@ -543,6 +616,38 @@
   async function fetchBlob(f, inline) {
     const res = await api("/api/files/" + f.id + "/download" + (inline ? "?inline=true" : ""), { raw: true });
     return res.blob();
+  }
+
+  function selectedIds() {
+    const keys = Array.from(selected);
+    return { fileIds: keys.filter((s) => s.startsWith('f:')).map((s) => s.slice(2)),
+      folderIds: keys.filter((s) => s.startsWith('d:')).map((s) => s.slice(2)) };
+  }
+
+  async function downloadArchive(path, options, name) {
+    try {
+      toast('Preparing ZIP download...');
+      const res = await api(path, Object.assign({ raw: true }, options));
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  function downloadZip(selection, name) {
+    return downloadArchive('/api/downloads/zip', { method: 'POST', body: selection }, name || 'Nimbus Drive.zip');
+  }
+
+  async function downloadSelectedSeparately() {
+    const { fileIds, folderIds } = selectedIds();
+    for (const id of fileIds) {
+      const file = byId(id);
+      if (file) await download(file);
+    }
+    for (const id of folderIds) {
+      const folder = folderById(id);
+      if (folder) await downloadZip({ fileIds: [], folderIds: [id] }, folder.name + '.zip');
+    }
   }
 
   async function download(f) {
@@ -770,10 +875,10 @@
   }
 
   async function deleteFile(f) {
-    if (!(await confirmDialog("Delete file?", "“" + f.name + "” will be permanently deleted from storage, and its share links will be revoked."))) return;
+    if (!(await confirmDialog("Move to trash?", "“" + f.name + "” can be restored for 30 days. Its share links will be unavailable while it is in trash.", "Move to trash"))) return;
     try {
       await api("/api/files/" + f.id, { method: "DELETE" });
-      toast("Deleted " + f.name);
+      toast("Moved to trash: " + f.name);
       load();
       loadProfile();
     } catch (e) { toast(e.message, "error"); }
@@ -800,10 +905,10 @@
   }
 
   async function deleteFolder(f) {
-    if (!(await confirmDialog("Delete folder?", "“" + f.name + "” and all subfolders and files inside it will be permanently deleted."))) return;
+    if (!(await confirmDialog("Move folder to trash?", "“" + f.name + "” and its contents can be restored for 30 days. Sharing will be unavailable while in trash.", "Move to trash"))) return;
     try {
       await api("/api/folders/" + f.id, { method: "DELETE" });
-      toast("Folder deleted");
+      toast("Folder moved to trash");
       load();
       loadProfile();
     } catch (e) { toast(e.message, "error"); }

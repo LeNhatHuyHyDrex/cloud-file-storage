@@ -13,7 +13,8 @@ Nimbus Drive là nền tảng lưu trữ file trên cloud (kiểu Google Drive t
 | Nhóm | Chi tiết |
 |---|---|
 | Tài khoản | Đăng ký / đăng nhập JWT (HS256), mật khẩu BCrypt, khóa tạm 5 phút sau 5 lần sai |
-| File | Upload kéo-thả nhiều file có thanh tiến độ, tải xuống, đổi tên, gắn sao, xóa, tìm kiếm |
+| File | Upload kéo-thả, chọn nhiều tệp để tải riêng hoặc nén ZIP, tải cả thư mục, đổi tên, gắn sao, tìm kiếm |
+| Thùng rác | Khôi phục trong 30 ngày hoặc xóa vĩnh viễn; tệp trong thùng rác vẫn tính vào quota |
 | Thư mục | Thư mục lồng nhau, breadcrumb, kéo file thả vào thư mục, di chuyển, xóa đệ quy |
 | Xem trước | Ảnh, PDF, video, audio, text/code ngay trên trình duyệt |
 | Chia sẻ | Link file/thư mục có thời hạn và thu hồi; mời tài khoản nhận thư mục, chấp nhận hoặc từ chối trong ứng dụng |
@@ -84,6 +85,11 @@ H2 database + lưu file vào thư mục `./data`:
 Thư mục được chia sẻ cho phép xem và tải xuống, bao gồm các thư mục con; người nhận không có quyền sửa.
 Lời mời hiện trong mục **Shared with me** của ứng dụng, không gửi email. Người giữ link có thể xem và tải xuống
 cho đến khi link hết hạn hoặc bị thu hồi.
+
+Tệp/thư mục chuyển vào **Trash** được giữ 30 ngày, có thể khôi phục hoặc xóa vĩnh viễn. Dữ liệu vẫn tính quota khi ở trong thùng rác.
+Tác vụ nền kiểm tra thùng rác hết hạn mỗi giờ và thử lại việc xóa object nếu storage tạm lỗi. Với AWS S3, cần quyền
+`s3:ListBucketVersions` và `s3:DeleteObjectVersion` để xóa cả các phiên bản cũ. Nếu dùng nhà cung cấp S3 tương thích
+có bật versioning qua endpoint tùy chỉnh, đặt `S3_PURGE_VERSIONS=true` và cấp các quyền tương ứng.
 
 Lỗi trả về chuẩn RFC 7807 (`application/problem+json`).
 

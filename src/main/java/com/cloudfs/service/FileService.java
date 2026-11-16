@@ -4,22 +4,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,8 +32,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 /** Nghiep vu file: ghi metadata vao DB, noi dung vao object storage, kiem tra quyen va quota. */
 @Service
 public class FileService {
-
-    private static final Logger log = LoggerFactory.getLogger(FileService.class);
 
     /** Kieu duoc phep hien thi inline; cac kieu khac (html, svg...) bi ep tai ve de tranh XSS. */
     private static final Set<String> INLINE_SAFE_PREFIX = Set.of("image/png", "image/jpeg", "image/gif", "image/webp",
@@ -176,40 +169,9 @@ public class FileService {
         return files.save(meta);
     }
 
-    @Transactional
-    public void delete(String owner, UUID id) {
-        deleteAll(List.of(findOwned(id, owner)));
-    }
-
-    /** Xoa metadata trong transaction; chi xoa object tren storage SAU KHI commit thanh cong. */
-    @Transactional
-    public void deleteAll(Collection<FileMeta> metas) {
-        if (metas.isEmpty()) {
-            return;
-        }
-        List<String> keys = metas.stream().map(FileMeta::getObjectKey).toList();
-        files.deleteAll(metas);
-        files.flush();
-        Runnable removeObjects = () -> keys.forEach(k -> {
-            try {
-                storage.delete(k);
-            } catch (RuntimeException e) {
-                log.warn("Could not delete object {}: {}", k, e.getMessage());
-            }
-        });
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    removeObjects.run();
-                }
-            });
-        } else {
-            removeObjects.run();
-        }
-    }
-
     public String backendName() {
         return storage.backendName();
     }
+
+    public long storageUsed(String owner) { return files.totalSizeByOwner(owner); }
 }

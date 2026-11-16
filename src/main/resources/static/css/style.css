@@ -202,6 +202,14 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 }
 .folder-card:hover { box-shadow: var(--shadow); border-color: transparent; transform: translateY(-1px); }
 .folder-card.drop { border-color: var(--primary); background: var(--primary-soft); }
+.folder-card.selected, .file-card.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.item-select { width: 18px; height: 18px; flex: none; accent-color: var(--primary); cursor: pointer; }
+.file-card > .item-select { position: absolute; z-index: 2; top: 10px; left: 10px; margin: 0; }
+.selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 20px; }
+.selection-bar label { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; cursor: pointer; }
+.selection-bar input { width: 18px; height: 18px; accent-color: var(--primary); }
+.selection-bar [data-selection-count] { color: var(--text-2); font-size: 13px; margin-right: auto; }
+.table tr.selected td { background: var(--primary-soft); }
 .folder-card .name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ficon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; }
 .ficon svg.i { width: 20px; height: 20px; }

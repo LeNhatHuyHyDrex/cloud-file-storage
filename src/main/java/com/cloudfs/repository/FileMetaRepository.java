@@ -27,6 +27,6 @@ public interface FileMetaRepository extends JpaRepository<FileMeta, UUID> {
 
     long countByOwner(String owner);
 
-    @Query("select coalesce(sum(f.size), 0) from FileMeta f where f.owner = :owner")
+    @Query(value = "select coalesce(sum(size), 0) from files where owner = :owner", nativeQuery = true)
     long totalSizeByOwner(String owner);
 }
