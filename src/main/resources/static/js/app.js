@@ -255,8 +255,8 @@
     const s = state.sharedFolder, c = s && s.contents;
     if (!c) return '<div class="muted">Loading folder...</div>';
     return '<div class="shared-folder-head"><button class="btn" data-shared-back>' + icon("chevron") + 'Back</button><div><strong>' + esc(c.folderName) + '</strong><div class="muted small">Shared by ' + esc(c.owner) + ' · View and download</div></div><button class="btn" data-shared-folder-download>Download folder ZIP</button></div>' +
-      '<div class="shared-items">' + c.folders.map((f) => '<button class="shared-item shared-entry" data-shared-folder="' + f.id + '">' + folderIcon() + '<span>' + esc(f.name) + '</span></button>').join("") +
-      c.files.map((f) => '<div class="shared-item">' + fileIcon(f.category) + '<div class="shared-item-info"><strong>' + esc(f.name) + '</strong><span class="muted small">' + bytes(f.size) + '</span></div>' +
+      '<div class="shared-items">' + c.folders.map((f) => '<div class="shared-item">' + selectBox('d', f) + '<button class="shared-folder-open" data-shared-folder="' + f.id + '">' + folderIcon() + '<span>' + esc(f.name) + '</span></button></div>').join("") +
+      c.files.map((f) => '<div class="shared-item">' + selectBox('f', f) + fileIcon(f.category) + '<div class="shared-item-info"><strong>' + esc(f.name) + '</strong><span class="muted small">' + bytes(f.size) + '</span></div>' +
         (/^(image\/(png|jpeg|gif|webp|bmp)|video\/|audio\/|application\/pdf)/i.test(f.contentType || '') ? '<button class="btn" data-shared-preview="' + f.id + '">Preview</button>' : '') +
         '<button class="btn" data-shared-download="' + f.id + '">Download</button></div>').join("") +
       (!c.folders.length && !c.files.length ? '<p class="muted">This folder is empty.</p>' : '') + '</div>';
@@ -295,6 +295,8 @@
       loadThumbs();
     }
     if (["files", "recent", "starred", "search"].includes(state.view) && (state.files.length || state.folders.length)) v.insertAdjacentHTML('afterbegin', selectionBar());
+    if (state.view === 'shared-folder' && state.sharedFolder && state.sharedFolder.contents &&
+        (state.sharedFolder.contents.files.length || state.sharedFolder.contents.folders.length)) v.insertAdjacentHTML('afterbegin', selectionBar());
     bindView(v);
     updateSelection(v);
   }
@@ -393,6 +395,7 @@
       go('shared-folder');
     }));
     $$('[data-shared-folder]', v).forEach((b) => b.addEventListener('click', () => {
+      selected.clear();
       state.sharedFolder.path.push(state.sharedFolder.folderId);
       state.sharedFolder.folderId = b.dataset.sharedFolder;
       state.sharedFolder.contents = null;
@@ -401,6 +404,7 @@
     const back = $('[data-shared-back]', v);
     if (back) back.addEventListener('click', () => {
       if (!state.sharedFolder.path.length) return go('incoming');
+      selected.clear();
       state.sharedFolder.folderId = state.sharedFolder.path.pop();
       state.sharedFolder.contents = null; load();
     });
@@ -411,12 +415,7 @@
     });
     $$('[data-shared-download]', v).forEach((b) => b.addEventListener('click', async () => {
       const f = state.sharedFolder.contents.files.find((x) => x.id === b.dataset.sharedDownload);
-      try {
-        const res = await api('/api/folder-invitations/' + state.sharedFolder.id + '/files/' + f.id, { raw: true });
-        const url = URL.createObjectURL(await res.blob());
-        const a = document.createElement('a'); a.href = url; a.download = f.name; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-      } catch (e) { toast(e.message, 'error'); }
+      await downloadSharedFile(f);
     }));
     $$('[data-shared-preview]', v).forEach((b) => b.addEventListener('click', async () => {
       const f = state.sharedFolder.contents.files.find((x) => x.id === b.dataset.sharedPreview);
@@ -635,17 +634,27 @@
   }
 
   function downloadZip(selection, name) {
-    return downloadArchive('/api/downloads/zip', { method: 'POST', body: selection }, name || 'Nimbus Drive.zip');
+    const path = state.view === 'shared-folder' ? '/api/folder-invitations/' + state.sharedFolder.id + '/zip' : '/api/downloads/zip';
+    return downloadArchive(path, { method: 'POST', body: selection }, name || 'Nimbus Drive.zip');
+  }
+
+  async function downloadSharedFile(f) {
+    try {
+      const res = await api('/api/folder-invitations/' + state.sharedFolder.id + '/files/' + f.id, { raw: true });
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a'); a.href = url; a.download = f.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) { toast(e.message, 'error'); }
   }
 
   async function downloadSelectedSeparately() {
     const { fileIds, folderIds } = selectedIds();
     for (const id of fileIds) {
-      const file = byId(id);
-      if (file) await download(file);
+      const file = state.view === 'shared-folder' ? state.sharedFolder.contents.files.find((f) => f.id === id) : byId(id);
+      if (file) { if (state.view === 'shared-folder') await downloadSharedFile(file); else await download(file); }
     }
     for (const id of folderIds) {
-      const folder = folderById(id);
+      const folder = state.view === 'shared-folder' ? state.sharedFolder.contents.folders.find((f) => f.id === id) : folderById(id);
       if (folder) await downloadZip({ fileIds: [], folderIds: [id] }, folder.name + '.zip');
     }
   }

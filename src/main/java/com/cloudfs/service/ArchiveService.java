@@ -47,6 +47,15 @@ public class ArchiveService {
 
     public List<Entry> planFolder(Folder root) { return planAuthorized(root.getOwner(), List.of(), List.of(root)); }
 
+    public List<Entry> planShared(String owner, List<FileMeta> selectedFiles, List<Folder> selectedFolders) {
+        if (selectedFiles.size() + selectedFolders.size() == 0 || selectedFiles.size() + selectedFolders.size() > 1000)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select between 1 and 1000 items");
+        if (selectedFiles.stream().anyMatch(f -> !owner.equals(f.getOwner()))
+                || selectedFolders.stream().anyMatch(f -> !owner.equals(f.getOwner())))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Shared item not found");
+        return planAuthorized(owner, selectedFiles, selectedFolders);
+    }
+
     private List<Entry> planAuthorized(String owner, List<FileMeta> selectedFiles, List<Folder> selectedFolders) {
         Map<UUID, List<Folder>> children = new HashMap<>();
         Map<UUID, Folder> allFolders = new HashMap<>();

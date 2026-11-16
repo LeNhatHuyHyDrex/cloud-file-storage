@@ -44,6 +44,15 @@ public class ArchiveController {
         return response(archives, archives.planFolder(folder), folder.getName() + ".zip");
     }
 
+    @PostMapping("/api/folder-invitations/{id}/zip")
+    public ResponseEntity<StreamingResponseBody> selectedShared(@PathVariable UUID id,
+            @Valid @RequestBody ArchiveRequest request, Authentication auth) {
+        var root = sharing.invitationFolder(auth.getName(), id, null);
+        var files = request.fileIds().stream().map(fileId -> sharing.invitationFile(auth.getName(), id, fileId)).toList();
+        var folders = request.folderIds().stream().map(folderId -> sharing.invitationFolder(auth.getName(), id, folderId)).toList();
+        return response(archives, archives.planShared(root.getOwner(), files, folders), "Nimbus Drive.zip");
+    }
+
     @GetMapping("/api/public/folders/{token}/zip")
     public ResponseEntity<StreamingResponseBody> publicShared(@PathVariable String token, @RequestParam(required = false) UUID folderId) {
         var folder = sharing.linkFolder(token, folderId);

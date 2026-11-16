@@ -346,6 +346,9 @@ class ApiFlowTest {
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient))
                 .andExpect(status().isNotFound());
+        String selection = "{\"fileIds\":[\"" + inside + "\"],\"folderIds\":[]}";
+        mvc.perform(post("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient)
+                .contentType(MediaType.APPLICATION_JSON).content(selection)).andExpect(status().isNotFound());
         mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", stranger))
                 .andExpect(status().isNotFound());
         mvc.perform(post("/api/folder-invitations/" + id + "/accept").header("Authorization", recipient))
@@ -359,6 +362,12 @@ class ApiFlowTest {
         var archive = mvc.perform(get("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient))
                 .andExpect(request().asyncStarted()).andReturn();
         mvc.perform(asyncDispatch(archive)).andExpect(status().isOk()).andExpect(header().string("Content-Type", "application/zip"));
+        var selectedArchive = mvc.perform(post("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient)
+                .contentType(MediaType.APPLICATION_JSON).content(selection)).andExpect(request().asyncStarted()).andReturn();
+        mvc.perform(asyncDispatch(selectedArchive)).andExpect(status().isOk());
+        mvc.perform(post("/api/folder-invitations/" + id + "/zip").header("Authorization", recipient)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"fileIds\":[\"" + outside + "\"],\"folderIds\":[]}"))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/api/folder-invitations/" + id + "/zip?folderId=" + UUID.randomUUID()).header("Authorization", recipient))
                 .andExpect(status().isNotFound());
         mvc.perform(delete("/api/folder-invitations/" + id).header("Authorization", owner))
